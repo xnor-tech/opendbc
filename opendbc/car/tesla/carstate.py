@@ -111,7 +111,8 @@ class CarState(CarStateBase):
     ret.stockLkas = cp_ap_party.vl["DAS_steeringControl"]["DAS_steeringControlType"] == 2  # LANE_KEEP_ASSIST
 
     # Stock Autosteer should be off (includes FSD)
-    ret.invalidLkasSetting = cp_ap_party.vl["DAS_settings"]["DAS_autosteerEnabled"] != 0
+    # Not available in Model S, X and Y (Juniper).
+    ret.invalidLkasSetting = False  # cp_ap_party.vl["DAS_settings"]["DAS_autosteerEnabled"] != 0
 
     # Buttons # ToDo: add Gap adjust button
 
@@ -136,7 +137,6 @@ class CarState(CarStateBase):
       ("DAS_control", 25),
       ("DAS_steeringControl", 50),
       ("DAS_status", 2),
-      ("DAS_settings", 2),
       ("SCCM_steeringAngleSensor", 100),
     ]
 
