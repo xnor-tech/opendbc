@@ -47,7 +47,7 @@ class CarState(CarStateBase):
 
     # Brake pedal
     ret.brake = 0
-    ret.brakePressed = cp_party.vl["IBST_status"]["IBST_driverBrakeApply"] == 2
+    ret.brakePressed = cp_party.vl["BrakeMessage"]["driverBrakeStatus"] == 2
 
     # Steering wheel
     epas_status = cp_party.vl["EPAS3S_sysStatus"]
@@ -127,7 +127,7 @@ class CarState(CarStateBase):
       # sig_address, frequency
       ("DI_speed", 50),
       ("DI_systemStatus", 100),
-      ("IBST_status", 25),
+      ("BrakeMessage", 50),
       ("DI_state", 10),
       ("EPAS3S_sysStatus", 100),
       ("UI_warning", 10)

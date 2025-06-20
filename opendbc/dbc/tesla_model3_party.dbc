@@ -35,6 +35,10 @@ BS_:
 
 BU_: CH DIPF DIPR ETH FC HVI HVS PARTY SDCV VEH VIRT
 
+BO_ 325 BrakeMessage: 8 XXX
+ SG_ Checksum : 0|8@1+ (1,0) [0|255] "" XXX
+ SG_ Counter : 8|4@1+ (1,0) [0|15] "" XXX
+ SG_ driverBrakeStatus : 29|2@1+ (1,0) [0|3] "" XXX
 
 BO_ 905 DAS_status2: 8 PARTY
  SG_ DAS_status2Checksum : 56|8@1+ (1,0) [0|255] ""  aps
