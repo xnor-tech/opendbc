@@ -63,6 +63,10 @@ VAL_TABLE_ DI_speedUnits 1 "DI_SPEED_KPH" 0 "DI_SPEED_MPH" ;
 VAL_TABLE_ DI_state 4 "DI_STATE_ENABLE" 3 "DI_STATE_FAULT" 2 "DI_STATE_CLEAR_FAULT" 1 "DI_STATE_STANDBY" 0 "DI_STATE_PREAUTH" ;
 VAL_TABLE_ DI_velocityEstimatorState 4 "VE_STATE_BACKUP_MOTOR" 3 "VE_STATE_BACKUP_WHEELS_B" 2 "VE_STATE_BACKUP_WHEELS_A" 1 "VE_STATE_WHEELS_NORMAL" 0 "VE_STATE_NOT_INITIALIZED" ;
 
+BO_ 637 APS_eacMonitor: 3 APS
+  SG_ APS_eacAllow : 0|2@1+ (1,0) [0|0] "" EPAS3P
+  SG_ APS_eacMonitorCounter : 8|4@1+ (1,0) [0|0] "" EPAS3P
+  SG_ APS_eacMonitorChecksum : 16|8@1+ (1,0) [0|0] "" EPAS3P
 
 BO_ 1160 DAS_steeringControl: 4 NEO
  SG_ DAS_steeringControlType : 23|2@0+ (1,0) [0|0] "" EPAS
@@ -794,6 +798,7 @@ VAL_ 521 DAS_locSpeed 2047 "SNA" ;
 VAL_ 521 DAS_locAccelMin 511 "SNA" ;
 VAL_ 521 DAS_locAccelMax 511 "SNA" ;
 VAL_ 522 driverBrakeStatus 2 "APPLIED" 1 "NOT_APPLIED" ;
+VAL_ 637 APS_eacAllow 3 "APS_EAC_SNA" 2 "APS_EAC_RESERVED" 1 "APS_EAC_ALLOW" 0 "APS_EAC_INHIBIT" ;
 VAL_ 760 UI_mapSpeedLimitUnits 1 "KPH" 0 "MPH" ;
 VAL_ 760 UI_userSpeedOffsetUnits 1 "KPH" 0 "MPH" ;
 VAL_ 643 AirTemp_Insd 255 "SNA" ;

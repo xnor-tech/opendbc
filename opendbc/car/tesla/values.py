@@ -55,6 +55,16 @@ class CAR(Platforms):
      ],
     CarSpecs(mass=2072., wheelbase=2.890, steerRatio=12.0),
   )
+  TESLA_MODEL_S_HW2 = TeslaPlatformConfig(
+    [CarDocs("Tesla Model S HW2", "All")],
+    CarSpecs(mass=2100., wheelbase=2.959, steerRatio=15.0),
+    {
+      Bus.chassis: 'tesla_can',
+      Bus.party: 'tesla_can',
+      Bus.pt: 'tesla_powertrain',
+      Bus.radar: 'tesla_radar_bosch_generated',
+    },
+  )
   TESLA_MODEL_S_RAVEN = TeslaPlatformConfig(
     [CarDocs("Tesla Model S Raven", "All")],
     CarSpecs(mass=2100., wheelbase=2.959, steerRatio=15.0),
@@ -131,6 +141,12 @@ class CarControllerParams:
 class TeslaSafetyFlags(IntFlag):
   LONG_CONTROL = 1
 
+
+class TeslaFlags(IntFlag):
+  NO_SDM1 = 1
+
+
+LEGACY_CARS = (CAR.TESLA_MODEL_S_HW2, CAR.TESLA_MODEL_S_RAVEN)
 
 DBC = CAR.create_dbc_map()
 

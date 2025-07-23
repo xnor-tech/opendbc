@@ -4,7 +4,7 @@ from opendbc.can.parser import CANParser
 from opendbc.car import Bus, structs
 from opendbc.car.common.conversions import Conversions as CV
 from opendbc.car.interfaces import CarStateBase
-from opendbc.car.tesla.values import CAR, DBC, CANBUS, GEAR_MAP, STEER_THRESHOLD
+from opendbc.car.tesla.values import CAR, DBC, CANBUS, GEAR_MAP, STEER_THRESHOLD, TeslaFlags, LEGACY_CARS
 
 ButtonType = structs.CarState.ButtonEvent.Type
 
@@ -14,10 +14,12 @@ class CarState(CarStateBase):
     super().__init__(CP)
     self.can_define = CANDefine(DBC[CP.carFingerprint][Bus.party])
 
-    if self.CP.carFingerprint == CAR.TESLA_MODEL_S_RAVEN:
-      # TODO: this should be swapped on the harnesses
-      CANBUS.chassis = 1
-      CANBUS.radar = 5
+    if self.CP.carFingerprint in LEGACY_CARS:
+      if self.CP.carFingerprint == CAR.TESLA_MODEL_S_RAVEN:
+        # TODO: this should be swapped on the harnesses
+        CANBUS.chassis = 1
+        CANBUS.radar = 5
+
       self.can_define_party = CANDefine(DBC[CP.carFingerprint][Bus.party])
       self.can_define_pt = CANDefine(DBC[CP.carFingerprint][Bus.pt])
       self.can_define_chassis = CANDefine(DBC[CP.carFingerprint][Bus.chassis])
@@ -47,8 +49,8 @@ class CarState(CarStateBase):
     self.cruise_enabled_prev = cruise_enabled
 
   def update(self, can_parsers) -> structs.CarState:
-    if self.CP.carFingerprint == CAR.TESLA_MODEL_S_RAVEN:
-      return self.update_raven(can_parsers)
+    if self.CP.carFingerprint in LEGACY_CARS:
+      return self.update_sx(can_parsers)
 
     cp_party = can_parsers[Bus.party]
     cp_ap_party = can_parsers[Bus.ap_party]
@@ -137,7 +139,7 @@ class CarState(CarStateBase):
 
     return ret
 
-  def update_raven(self, can_parsers) -> structs.CarState:
+  def update_sx(self, can_parsers) -> structs.CarState:
     cp_party = can_parsers[Bus.party]
     cp_ap_party = can_parsers[Bus.ap_party]
     cp_pt = can_parsers[Bus.pt]
@@ -146,7 +148,7 @@ class CarState(CarStateBase):
     ret = structs.CarState()
 
     # Vehicle speed
-    ret.vEgoRaw = cp_party.vl["ESP_private1"]["ESP_vehicleSpeed"] * CV.KPH_TO_MS
+    ret.vEgoRaw = cp_chassis.vl["ESP_B"]["ESP_vehicleSpeed"] * CV.KPH_TO_MS
     ret.vEgo, ret.aEgo = self.update_speed_kf(ret.vEgoRaw)
 
     # Gas pedal
@@ -156,13 +158,13 @@ class CarState(CarStateBase):
 
     # Brake pedal
     ret.brake = 0
-    ret.brakePressed = cp_party.vl["IBST_private2"]["IBST_brakePedalApplied"] == 2
+    ret.brakePressed = cp_chassis.vl["BrakeMessage"]["driverBrakeStatus"] == 2
 
     # Steering wheel
     epas_status = cp_party.vl["EPAS_sysStatus"]
     self.hands_on_level = epas_status["EPAS_handsOnLevel"]
     ret.steeringAngleDeg = -epas_status["EPAS_internalSAS"]
-    ret.steeringRateDeg = -cp_ap_party.vl["STW_ANGLHP_STAT"]["StW_AnglHP_Spd"]
+    ret.steeringRateDeg = -cp_chassis.vl["STW_ANGLHP_STAT"]["StW_AnglHP_Spd"]
 
     # stock handsOnLevel uses >0.5 for 0.25s, but is too slow
     ret.steeringPressed = self.update_steering_pressed(abs(-epas_status["EPAS_torsionBarTorque"]) > STEER_THRESHOLD, 5)
@@ -205,8 +207,10 @@ class CarState(CarStateBase):
     ret.rightBlinker = cp_chassis.vl["GTW_carState"]["BC_indicatorRStatus"] == 1
 
     # Seatbelt
-    # ret.seatbeltUnlatched = cp_chassis.vl["DriverSeat"]["buckleStatus"] != 1
-    ret.seatbeltUnlatched = cp_chassis.vl["SDM1"]["SDM_bcklDrivStatus"] != 1
+    if self.CP.flags & TeslaFlags.NO_SDM1:
+      ret.seatbeltUnlatched = cp_chassis.vl["DriverSeat"]["buckleStatus"] != 1
+    else:
+      ret.seatbeltUnlatched = cp_chassis.vl["SDM1"]["SDM_bcklDrivStatus"] != 1
 
     # AEB
     ret.stockAeb = cp_ap_pt.vl["DAS_control"]["DAS_aebEvent"] == 1
@@ -227,7 +231,7 @@ class CarState(CarStateBase):
 
   @staticmethod
   def get_can_parsers(CP):
-    if CP.carFingerprint == CAR.TESLA_MODEL_S_RAVEN:
+    if CP.carFingerprint in LEGACY_CARS:
       return CarState.get_can_parsers_raven(CP)
 
     party_messages = [
@@ -258,12 +262,9 @@ class CarState(CarStateBase):
 
     party_messages = [
       ("EPAS_sysStatus", 100),
-      ("ESP_private1", 50),
-      ("IBST_private2", 50),
     ]
 
     ap_party_messages = [
-      ("STW_ANGLHP_STAT", 100),
       ("DAS_steeringControl", 50),
     ]
 
@@ -277,18 +278,28 @@ class CarState(CarStateBase):
 
     chassis_messages = [
       ("GTW_carState", 10),
-      # ("DriverSeat", 20),
-      ("SDM1", 10),
       ("DI_torque2", 100),
       ("DI_state", 10),
+      ("BrakeMessage", 50),
+      ("STW_ANGLHP_STAT", 100),
+      ("ESP_B", 50),
     ]
+
+    if CP.flags & TeslaFlags.NO_SDM1:
+      chassis_messages.append(("DriverSeat", 20))
+    else:
+      chassis_messages.append(("SDM1", 10))
 
     parsers = {
       Bus.party: CANParser(DBC[CP.carFingerprint][Bus.party], party_messages, CANBUS.party),
       Bus.ap_party: CANParser(DBC[CP.carFingerprint][Bus.party], ap_party_messages, CANBUS.autopilot_party),
       Bus.pt: CANParser(DBC[CP.carFingerprint][Bus.pt], pt_messages, CANBUS.powertrain),
       Bus.ap_pt: CANParser(DBC[CP.carFingerprint][Bus.pt], ap_pt_messages, CANBUS.autopilot_powertrain),
-      Bus.chassis: CANParser(DBC[CP.carFingerprint][Bus.chassis], chassis_messages, CANBUS.chassis),
     }
+
+    if CP.carFingerprint == CAR.TESLA_MODEL_S_RAVEN:
+      parsers[Bus.chassis] = CANParser(DBC[CP.carFingerprint][Bus.chassis], chassis_messages, CANBUS.chassis)
+    elif CP.carFingerprint == CAR.TESLA_MODEL_S_HW2:
+      parsers[Bus.chassis] = CANParser(DBC[CP.carFingerprint][Bus.chassis], chassis_messages, CANBUS.party)
 
     return parsers

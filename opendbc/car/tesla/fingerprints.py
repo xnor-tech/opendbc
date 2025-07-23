@@ -39,8 +39,13 @@ FW_VERSIONS = {
   },
   CAR.TESLA_MODEL_S_RAVEN: {
     (Ecu.eps, 0x730, None): [
+      b'SX_0.0.0 (99),S013.7',
       b'SX_0.0.0 (99),SR013.7',
-      b'SX_0.0.0 (99),S013.7',  # HW2 vehicle upgraded to HW3 (not a true Raven)
     ],
-  }
+  },
+  CAR.TESLA_MODEL_S_HW2: {
+   (Ecu.eps, 0x730, None): [
+     b'\x10#\x01',
+   ],
+ },
 }

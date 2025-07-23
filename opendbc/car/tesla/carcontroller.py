@@ -5,7 +5,7 @@ from opendbc.car import ACCELERATION_DUE_TO_GRAVITY, Bus, AngleSteeringLimits, D
 from opendbc.car.interfaces import CarControllerBase, ISO_LATERAL_ACCEL
 from opendbc.car.tesla.teslacan import TeslaCAN
 from opendbc.car.tesla.teslacan_raven import TeslaCANRaven
-from opendbc.car.tesla.values import CAR, CANBUS, CarControllerParams
+from opendbc.car.tesla.values import CANBUS, CarControllerParams, LEGACY_CARS
 from opendbc.car.vehicle_model import VehicleModel
 
 # limit angle rate to both prevent a fault and for low speed comfort (~12 mph rate down to 0 mph)
@@ -68,14 +68,12 @@ class CarController(CarControllerBase):
     self.packer = CANPacker(dbc_names[Bus.party])
     self.tesla_can = TeslaCAN(self.packer)
 
-    self.tesla_raven = CP.carFingerprint == CAR.TESLA_MODEL_S_RAVEN
-    if self.tesla_raven:
-      self.packers = {CANBUS.party: CANPacker(dbc_names[Bus.party]), CANBUS.powertrain: CANPacker(dbc_names[Bus.pt])}
-      self.tesla_can = TeslaCANRaven(self.packers)
-
     # Vehicle model used for lateral limiting
     self.VM = VehicleModel(get_safety_CP())
-    if self.tesla_raven:
+
+    if CP.carFingerprint in LEGACY_CARS:
+      self.packers = {CANBUS.party: CANPacker(dbc_names[Bus.party]), CANBUS.powertrain: CANPacker(dbc_names[Bus.pt])}
+      self.tesla_can = TeslaCANRaven(self.packers)
       self.VM = VehicleModel(get_safety_raven_CP())
 
   def update(self, CC, CS, now_nanos):
@@ -92,18 +90,15 @@ class CarController(CarControllerBase):
       self.apply_angle_last = apply_tesla_steer_angle_limits(actuators.steeringAngleDeg, self.apply_angle_last, CS.out.vEgoRaw,
                                                              CS.out.steeringAngleDeg, lat_active,
                                                              CarControllerParams.ANGLE_LIMITS, self.VM)
-      if self.tesla_raven:
+      if self.CP.carFingerprint in LEGACY_CARS:
         cntr = (self.frame // 2) % 16
         can_sends.append(self.tesla_can.create_steering_control(cntr, self.apply_angle_last, lat_active))
       else:
         can_sends.append(self.tesla_can.create_steering_control(self.apply_angle_last, lat_active))
 
     if self.frame % 10 == 0:
-      if self.tesla_raven:
-        cntr = (self.frame // 10) % 16
-        can_sends.append(self.tesla_can.create_steering_allowed(cntr))
-      else:
-        can_sends.append(self.tesla_can.create_steering_allowed())
+      cntr = (self.frame // 10) % 16
+      can_sends.append(self.tesla_can.create_steering_allowed(cntr))
 
     # Longitudinal control
     if self.CP.openpilotLongitudinalControl:

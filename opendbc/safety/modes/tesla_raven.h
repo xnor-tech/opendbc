@@ -3,16 +3,22 @@
 #include "opendbc/safety/safety_declarations.h"
 
 static bool tesla_powertrain = false;
-static bool tesla_raven_aeb = false;
+static bool tesla_hw2 = false;
+static bool tesla_legacy_aeb = false;
 
 // Only rising edges while controls are not allowed are considered for these systems:
 // TODO: Only LKAS (non-emergency) is currently supported since we've only seen it
-static bool tesla_raven_stock_lkas = false;
-static bool tesla_raven_stock_lkas_prev = false;
+static bool tesla_legacy_stock_lkas = false;
+static bool tesla_legacy_stock_lkas_prev = false;
 
-static void tesla_raven_rx_hook(const CANPacket_t *to_push) {
+static void tesla_legacy_rx_hook(const CANPacket_t *to_push) {
   int bus = GET_BUS(to_push);
   int addr = GET_ADDR(to_push);
+  int chassis_bus = 1;
+  if (tesla_hw2){
+    chassis_bus = 0;
+  }
+
 
   // Steering angle: (0.1 * val) - 819.2 in deg.
   if (!tesla_powertrain && bus == 0 && addr == 0x370) {
@@ -28,10 +34,10 @@ static void tesla_raven_rx_hook(const CANPacket_t *to_push) {
     steering_disengage = (hands_on_level >= 3) || ((eac_status == 0) && (eac_error_code == 9));
   }
 
-  // Vehicle speed (ESP_private1: ESP_vehicleSpeed)
-  if (!tesla_powertrain && bus == 0 && addr == 0x38B) {
+  // Vehicle speed (ESP_B: ESP_vehicleSpeed)
+  if (!tesla_powertrain && bus == chassis_bus && addr == 0x155) {
     // Vehicle speed: (0.05625 * val) * KPH_TO_MPS
-    float speed = speed = (((GET_BYTE(to_push, 3) >> 2) | ((GET_BYTE(to_push, 4) << 6))) * 0.05625) * 0.27778;
+    float speed = ((GET_BYTE(to_push, 6)| (GET_BYTE(to_push, 5) << 8)) * 0.00999999978) * 0.27778;
     UPDATE_VEHICLE_SPEED(speed);
   }
 
@@ -41,13 +47,13 @@ static void tesla_raven_rx_hook(const CANPacket_t *to_push) {
   }
 
   if ((tesla_powertrain && (bus == 0) && (addr == 0x1f8)) ||
-     (!tesla_powertrain && (bus == 1) && (addr == 0x20a))) {
+     (!tesla_powertrain && (bus == chassis_bus) && (addr == 0x20a))) {
     brake_pressed = (((GET_BYTE(to_push, 0) & 0x0CU) >> 2) != 1U);
   }
 
   // Cruise
   if ((tesla_powertrain && (bus == 0) && (addr == 0x256)) ||
-     (!tesla_powertrain && (bus == 1) && (addr == 0x368))) {
+     (!tesla_powertrain && (bus == chassis_bus) && (addr == 0x368))) {
       // Cruise state
       int cruise_state = (GET_BYTE(to_push, 1) >> 4) & 0x07U;
       bool cruise_engaged = (cruise_state == 2) ||  // ENABLED
@@ -63,28 +69,28 @@ static void tesla_raven_rx_hook(const CANPacket_t *to_push) {
     // DAS_control
     if (tesla_powertrain && addr == 0x2bf) {
       // "AEB_ACTIVE"
-      tesla_raven_aeb = (GET_BYTE(to_push, 2) & 0x03U) == 1U;
+      tesla_legacy_aeb = (GET_BYTE(to_push, 2) & 0x03U) == 1U;
     }
 
     // DAS_steeringControl
     if (!tesla_powertrain && addr == 0x488) {
       int steering_control_type = GET_BYTE(to_push, 2) >> 6;
-      bool tesla_raven_stock_lkas_now = steering_control_type == 2;  // "LANE_KEEP_ASSIST"
+      bool tesla_legacy_stock_lkas_now = steering_control_type == 2;  // "LANE_KEEP_ASSIST"
 
       // Only consider rising edges while controls are not allowed
-      if (tesla_raven_stock_lkas_now && !tesla_raven_stock_lkas_prev && !controls_allowed) {
-        tesla_raven_stock_lkas = true;
+      if (tesla_legacy_stock_lkas_now && !tesla_legacy_stock_lkas_prev && !controls_allowed) {
+        tesla_legacy_stock_lkas = true;
       }
-      if (!tesla_raven_stock_lkas_now) {
-        tesla_raven_stock_lkas = false;
+      if (!tesla_legacy_stock_lkas_now) {
+        tesla_legacy_stock_lkas = false;
       }
-      tesla_raven_stock_lkas_prev = tesla_raven_stock_lkas_now;
+      tesla_legacy_stock_lkas_prev = tesla_legacy_stock_lkas_now;
     }
   }
 }
 
 
-static bool tesla_raven_tx_hook(const CANPacket_t *to_send) {
+static bool tesla_legacy_tx_hook(const CANPacket_t *to_send) {
   const AngleSteeringLimits TESLA_STEERING_LIMITS = {
     .max_angle = 3600,  // 360 deg, EPAS faults above this
     .angle_deg_to_can = 10,
@@ -126,7 +132,7 @@ static bool tesla_raven_tx_hook(const CANPacket_t *to_send) {
       violation = true;
     }
 
-    if (tesla_raven_stock_lkas) {
+    if (tesla_legacy_stock_lkas) {
       // Don't allow any steering commands when stock LKAS is active
       violation = true;
     }
@@ -141,7 +147,7 @@ static bool tesla_raven_tx_hook(const CANPacket_t *to_send) {
     }
 
     // Don't send long/cancel messages when the stock AEB system is active
-    if (tesla_raven_aeb) {
+    if (tesla_legacy_aeb) {
       violation = true;
     }
 
@@ -165,7 +171,7 @@ static bool tesla_raven_tx_hook(const CANPacket_t *to_send) {
   return tx;
 }
 
-static bool tesla_raven_fwd_hook(int bus_num, int addr) {
+static bool tesla_legacy_fwd_hook(int bus_num, int addr) {
   bool block_msg = false;
 
   if (bus_num == 2) {
@@ -175,12 +181,12 @@ static bool tesla_raven_fwd_hook(int bus_num, int addr) {
     }
 
     // DAS_steeringControl
-    if (!tesla_powertrain && (addr == 0x488) && !tesla_raven_stock_lkas) {
+    if (!tesla_powertrain && (addr == 0x488) && !tesla_legacy_stock_lkas) {
       block_msg = true;
     }
 
     // DAS_control
-    if (tesla_powertrain && (addr == 0x2bf) && !tesla_raven_aeb) {
+    if (tesla_powertrain && (addr == 0x2bf) && !tesla_legacy_aeb) {
       block_msg = true;
     }
   }
@@ -188,49 +194,58 @@ static bool tesla_raven_fwd_hook(int bus_num, int addr) {
   return block_msg;
 }
 
-static safety_config tesla_raven_init(uint16_t param) {
+static safety_config tesla_legacy_init(uint16_t param) {
 
-  static const CanMsg TESLA_TX_RAVEN_MSGS[] = {
+  static const CanMsg TESLA_TX_LEGACY_MSGS[] = {
     {0x488, 0, 4, .check_relay = true, .disable_static_blocking = true},  // DAS_steeringControl
     {0x27D, 0, 3, .check_relay = true, .disable_static_blocking = true},  // APS_eacMonitor
   };
 
-  static const CanMsg TESLA_RAVEN_PT_MSGS[] = {
+  static const CanMsg TESLA_LEGACY_PT_MSGS[] = {
     {0x2bf, 0, 8, .check_relay = true, .disable_static_blocking = true},  // DAS_control
   };
 
   const int TESLA_FLAG_POWERTRAIN = 2;
+  const int TESLA_FLAG_HW2 = 4;
   tesla_powertrain = GET_FLAG(param, TESLA_FLAG_POWERTRAIN);
+  tesla_hw2 = GET_FLAG(param, TESLA_FLAG_HW2);
 
-
-  tesla_raven_aeb = false;
-  tesla_raven_stock_lkas = false;
-  tesla_raven_stock_lkas_prev = false;
+  tesla_legacy_aeb = false;
+  tesla_legacy_stock_lkas = false;
+  tesla_legacy_stock_lkas_prev = false;
 
   safety_config ret;
   if (tesla_powertrain) {
-    static RxCheck tesla_raven_pt_rx_checks[] = {
+    static RxCheck tesla_legacy_pt_rx_checks[] = {
       {.msg = {{0x106, 0, 8, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true, .frequency = 100U}, { 0 }, { 0 }}},  // DI_torque1
       {.msg = {{0x1f8, 0, 8, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true, .frequency = 50U}, { 0 }, { 0 }}},   // BrakeMessage
       {.msg = {{0x2bf, 2, 8, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true, .frequency = 25U}, { 0 }, { 0 }}},   // DAS_control
       {.msg = {{0x256, 0, 8, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true, .frequency = 10U}, { 0 }, { 0 }}},   // DI_state
     };
-    ret = BUILD_SAFETY_CFG(tesla_raven_pt_rx_checks, TESLA_RAVEN_PT_MSGS);
-  } else {
-    static RxCheck tesla_raven_rx_checks[] = {
+    ret = BUILD_SAFETY_CFG(tesla_legacy_pt_rx_checks, TESLA_LEGACY_PT_MSGS);
+  } else if(tesla_hw2){
+     static RxCheck tesla_legacy_hw2_rx_checks[] = {
       {.msg = {{0x370, 0, 8, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true, .frequency = 100U}, { 0 }, { 0 }}},  // EPAS3P_sysStatus
-      {.msg = {{0x38B, 0, 8, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true, .frequency = 50U}, { 0 }, { 0 }}},   // ESP_private1
+      {.msg = {{0x155, 0, 8, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true, .frequency = 50U}, { 0 }, { 0 }}},   // ESP_private1
+      {.msg = {{0x20a, 0, 8, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true, .frequency = 50U}, { 0 }, { 0 }}},   // BrakeMessage
+      {.msg = {{0x368, 0, 8, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true, .frequency = 10U}, { 0 }, { 0 }}},   // DI_state
+    };
+    ret = BUILD_SAFETY_CFG(tesla_legacy_hw2_rx_checks, TESLA_TX_LEGACY_MSGS);
+  } else {
+    static RxCheck tesla_legacy_rx_checks[] = {
+      {.msg = {{0x370, 0, 8, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true, .frequency = 100U}, { 0 }, { 0 }}},  // EPAS3P_sysStatus
+      {.msg = {{0x155, 1, 8, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true, .frequency = 50U}, { 0 }, { 0 }}},   // ESP_private1
       {.msg = {{0x20a, 1, 8, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true, .frequency = 50U}, { 0 }, { 0 }}},   // BrakeMessage
       {.msg = {{0x368, 1, 8, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true, .frequency = 10U}, { 0 }, { 0 }}},   // DI_state
     };
-    ret = BUILD_SAFETY_CFG(tesla_raven_rx_checks, TESLA_TX_RAVEN_MSGS);
+    ret = BUILD_SAFETY_CFG(tesla_legacy_rx_checks, TESLA_TX_LEGACY_MSGS);
   }
   return ret;
 }
 
-const safety_hooks tesla_raven_hooks = {
-  .init = tesla_raven_init,
-  .rx = tesla_raven_rx_hook,
-  .tx = tesla_raven_tx_hook,
-  .fwd = tesla_raven_fwd_hook,
+const safety_hooks tesla_legacy_hooks = {
+  .init = tesla_legacy_init,
+  .rx = tesla_legacy_rx_hook,
+  .tx = tesla_legacy_tx_hook,
+  .fwd = tesla_legacy_fwd_hook,
 };
