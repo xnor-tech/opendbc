@@ -55,6 +55,10 @@ class CAR(Platforms):
      ],
     CarSpecs(mass=2072., wheelbase=2.890, steerRatio=12.0),
   )
+  TESLA_MODEL_X = TeslaPlatformConfig(
+    [TeslaCarDocsHW4("Tesla Model X (with HW4) 2024")],
+    CarSpecs(mass=2495., wheelbase=2.960, steerRatio=12.0),
+  )
   TESLA_MODEL_S_HW2 = TeslaPlatformConfig(
     [CarDocs("Tesla Model S HW2", "All")],
     CarSpecs(mass=2100., wheelbase=2.959, steerRatio=15.0),
@@ -143,11 +147,11 @@ class TeslaSafetyFlags(IntFlag):
 
 
 class TeslaFlags(IntFlag):
-  NO_SDM1 = 1
-
-
-LEGACY_CARS = (CAR.TESLA_MODEL_S_HW2, CAR.TESLA_MODEL_S_RAVEN)
+  LONG_CONTROL = 1
+  NO_SDM1 = 2
 
 DBC = CAR.create_dbc_map()
 
 STEER_THRESHOLD = 1
+
+LEGACY_CARS = (CAR.TESLA_MODEL_S_HW2, CAR.TESLA_MODEL_S_RAVEN)
