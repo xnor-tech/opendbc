@@ -59,6 +59,10 @@ class CAR(Platforms):
     [TeslaCarDocsHW4("Tesla Model X (with HW4) 2024")],
     CarSpecs(mass=2495., wheelbase=2.960, steerRatio=12.0),
   )
+  TESLA_MODEL_S = TeslaPlatformConfig(
+    [TeslaCarDocsHW4("Tesla Model S (with HW4) 2024")],
+    CarSpecs(mass=2166., wheelbase=2.960, steerRatio=12.0),
+  )
   TESLA_MODEL_S_HW2 = TeslaPlatformConfig(
     [CarDocs("Tesla Model S HW2", "All")],
     CarSpecs(mass=2100., wheelbase=2.959, steerRatio=15.0),
