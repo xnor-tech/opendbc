@@ -225,7 +225,7 @@ static safety_config tesla_legacy_init(uint16_t param) {
     ret = BUILD_SAFETY_CFG(tesla_legacy_pt_rx_checks, TESLA_LEGACY_PT_MSGS);
   } else if(tesla_hw2){
      static RxCheck tesla_legacy_hw2_rx_checks[] = {
-      {.msg = {{0x370, 0, 8, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true, .frequency = 100U}, { 0 }, { 0 }}},  // EPAS3P_sysStatus
+      {.msg = {{0x370, 0, 8, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true, .frequency = 25U}, { 0 }, { 0 }}},   // EPAS_sysStatus (25hz)
       {.msg = {{0x155, 0, 8, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true, .frequency = 50U}, { 0 }, { 0 }}},   // ESP_private1
       {.msg = {{0x20a, 0, 8, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true, .frequency = 50U}, { 0 }, { 0 }}},   // BrakeMessage
       {.msg = {{0x368, 0, 8, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true, .frequency = 10U}, { 0 }, { 0 }}},   // DI_state
@@ -233,7 +233,7 @@ static safety_config tesla_legacy_init(uint16_t param) {
     ret = BUILD_SAFETY_CFG(tesla_legacy_hw2_rx_checks, TESLA_TX_LEGACY_MSGS);
   } else {
     static RxCheck tesla_legacy_rx_checks[] = {
-      {.msg = {{0x370, 0, 8, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true, .frequency = 100U}, { 0 }, { 0 }}},  // EPAS3P_sysStatus
+      {.msg = {{0x370, 0, 8, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true, .frequency = 100U}, { 0 }, { 0 }}},  // EPAS_sysStatus (100hz)
       {.msg = {{0x155, 1, 8, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true, .frequency = 50U}, { 0 }, { 0 }}},   // ESP_private1
       {.msg = {{0x20a, 1, 8, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true, .frequency = 50U}, { 0 }, { 0 }}},   // BrakeMessage
       {.msg = {{0x368, 1, 8, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true, .frequency = 10U}, { 0 }, { 0 }}},   // DI_state
