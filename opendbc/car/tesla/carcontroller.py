@@ -57,10 +57,6 @@ def get_safety_CP():
   from opendbc.car.tesla.interface import CarInterface
   return CarInterface.get_non_essential_params("TESLA_MODEL_Y")
 
-def get_safety_raven_CP():
-  from opendbc.car.tesla.interface import CarInterface
-  return CarInterface.get_non_essential_params("TESLA_MODEL_S_HW3")
-
 class CarController(CarControllerBase):
   def __init__(self, dbc_names, CP):
     super().__init__(dbc_names, CP)
@@ -78,7 +74,8 @@ class CarController(CarControllerBase):
 
       self.packers = {CANBUS.party: CANPacker(dbc_names[Bus.party]), CANBUS.powertrain: CANPacker(dbc_names[Bus.pt])}
       self.tesla_can = TeslaCANRaven(self.packers)
-      self.VM = VehicleModel(get_safety_raven_CP())
+      from opendbc.car.tesla.interface import CarInterface
+      self.VM = VehicleModel(CarInterface.get_non_essential_params("TESLA_MODEL_S_HW3"))
 
   def update(self, CC, CS, now_nanos):
     actuators = CC.actuators
