@@ -16,19 +16,29 @@ class CarInterface(CarInterfaceBase):
     ret.brand = "tesla"
 
     if candidate in LEGACY_CARS:
-      PARAM_POWERTRAIN = 2
-      PARAM_HW2 = 4
+      TESLA_LEGACY_SAFETY_MODEL = 99
+      PARAM_EXTERNAL_PANDA = 2
+      PARAM_HW1 = 4
+      PARAM_HW2 = 8
+      PARAM_HW3 = 16
 
       if not any(0x201 in f for f in fingerprint.values()):
         ret.flags |= TeslaFlags.NO_SDM1.value
 
-      ret.safetyConfigs = [
-        get_safety_config(99, 0),
-        get_safety_config(99, PARAM_POWERTRAIN),
-      ]
-      if candidate == CAR.TESLA_MODEL_S_HW2:
-        ret.safetyConfigs[0].safetyParam |= PARAM_HW2
-        ret.safetyConfigs[1].safetyParam |= PARAM_HW2
+      if candidate in (CAR.TESLA_MODEL_S_HW1,):
+        ret.safetyConfigs = [
+          get_safety_config(TESLA_LEGACY_SAFETY_MODEL, PARAM_HW1),
+        ]
+      elif candidate in (CAR.TESLA_MODEL_S_HW2,):
+        ret.safetyConfigs = [
+          get_safety_config(TESLA_LEGACY_SAFETY_MODEL, PARAM_HW2),
+          get_safety_config(TESLA_LEGACY_SAFETY_MODEL, PARAM_HW2 | PARAM_EXTERNAL_PANDA),
+        ]
+      elif candidate in (CAR.TESLA_MODEL_S_HW3,):
+        ret.safetyConfigs = [
+          get_safety_config(TESLA_LEGACY_SAFETY_MODEL, PARAM_HW3),
+          get_safety_config(TESLA_LEGACY_SAFETY_MODEL, PARAM_HW3 | PARAM_EXTERNAL_PANDA),
+        ]
     else:
       ret.safetyConfigs = [get_safety_config(structs.CarParams.SafetyModel.tesla)]
 

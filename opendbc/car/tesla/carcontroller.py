@@ -5,7 +5,7 @@ from opendbc.car import ACCELERATION_DUE_TO_GRAVITY, Bus, AngleSteeringLimits, D
 from opendbc.car.interfaces import CarControllerBase, ISO_LATERAL_ACCEL
 from opendbc.car.tesla.teslacan import TeslaCAN
 from opendbc.car.tesla.teslacan_raven import TeslaCANRaven
-from opendbc.car.tesla.values import CANBUS, CarControllerParams, LEGACY_CARS
+from opendbc.car.tesla.values import CANBUS, CarControllerParams, LEGACY_CARS, CAR
 from opendbc.car.vehicle_model import VehicleModel
 
 # limit angle rate to both prevent a fault and for low speed comfort (~12 mph rate down to 0 mph)
@@ -72,6 +72,10 @@ class CarController(CarControllerBase):
     self.VM = VehicleModel(get_safety_CP())
 
     if CP.carFingerprint in LEGACY_CARS:
+      if CP.carFingerprint == CAR.TESLA_MODEL_S_HW1:
+        CANBUS.powertrain = CANBUS.party
+        CANBUS.autopilot_powertrain = CANBUS.autopilot_party
+
       self.packers = {CANBUS.party: CANPacker(dbc_names[Bus.party]), CANBUS.powertrain: CANPacker(dbc_names[Bus.pt])}
       self.tesla_can = TeslaCANRaven(self.packers)
       self.VM = VehicleModel(get_safety_raven_CP())

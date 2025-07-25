@@ -15,9 +15,11 @@ class CarState(CarStateBase):
 
     if self.CP.carFingerprint in LEGACY_CARS:
       if self.CP.carFingerprint == CAR.TESLA_MODEL_S_HW3:
-        # TODO: this should be swapped on the harnesses
         CANBUS.chassis = 1
         CANBUS.radar = 5
+      elif self.CP.carFingerprint == CAR.TESLA_MODEL_S_HW1:
+        CANBUS.powertrain = CANBUS.party
+        CANBUS.autopilot_powertrain = CANBUS.autopilot_party
 
       self.can_define_party = CANDefine(DBC[CP.carFingerprint][Bus.party])
       self.can_define_pt = CANDefine(DBC[CP.carFingerprint][Bus.pt])
