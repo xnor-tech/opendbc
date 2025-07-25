@@ -21,14 +21,14 @@ static void tesla_legacy_rx_hook(const CANPacket_t *to_push) {
 
 
   // Steering angle: (0.1 * val) - 819.2 in deg.
-  if (!tesla_powertrain && bus == 0 && addr == 0x370) {
+  if (!tesla_powertrain && bus == chassis_bus && addr == 0x370) {
     // Store it 1/10 deg to match steering request
     const int angle_meas_new = (((GET_BYTE(to_push, 4) & 0x3FU) << 8) | GET_BYTE(to_push, 5)) - 8192U;
     update_sample(&angle_meas, angle_meas_new);
 
-    const int hands_on_level = GET_BYTE(to_push, 4) >> 6;  // EPAS3S_handsOnLevel
-    const int eac_status = GET_BYTE(to_push, 6) >> 5;  // EPAS3S_eacStatus
-    const int eac_error_code = GET_BYTE(to_push, 2) >> 4;  // EPAS3S_eacErrorCode
+    const int hands_on_level = GET_BYTE(to_push, 4) >> 6;  // handsOnLevel
+    const int eac_status = GET_BYTE(to_push, 6) >> 5;      // eacStatus
+    const int eac_error_code = GET_BYTE(to_push, 2) >> 4;  // eacErrorCode
 
     // Disengage on normal user override, or if high angle rate fault from user overriding extremely quickly
     steering_disengage = (hands_on_level >= 3) || ((eac_status == 0) && (eac_error_code == 9));
@@ -233,7 +233,7 @@ static safety_config tesla_legacy_init(uint16_t param) {
     ret = BUILD_SAFETY_CFG(tesla_legacy_hw2_rx_checks, TESLA_TX_LEGACY_MSGS);
   } else {
     static RxCheck tesla_legacy_rx_checks[] = {
-      {.msg = {{0x370, 0, 8, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true, .frequency = 100U}, { 0 }, { 0 }}},  // EPAS_sysStatus (100hz)
+      {.msg = {{0x370, 1, 8, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true, .frequency = 25U}, { 0 }, { 0 }}},   // EPAS_sysStatus (25hz)
       {.msg = {{0x155, 1, 8, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true, .frequency = 50U}, { 0 }, { 0 }}},   // ESP_private1
       {.msg = {{0x20a, 1, 8, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true, .frequency = 50U}, { 0 }, { 0 }}},   // BrakeMessage
       {.msg = {{0x368, 1, 8, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true, .frequency = 10U}, { 0 }, { 0 }}},   // DI_state
