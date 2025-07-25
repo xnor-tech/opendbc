@@ -169,9 +169,10 @@ class CarState(CarStateBase):
     self.hands_on_level = epas_status["EPAS_handsOnLevel"]
     ret.steeringAngleDeg = -epas_status["EPAS_internalSAS"]
     ret.steeringRateDeg = -cp_chassis.vl["STW_ANGLHP_STAT"]["StW_AnglHP_Spd"]
+    ret.steeringTorque = -epas_status["EPAS_torsionBarTorque"]
 
     # stock handsOnLevel uses >0.5 for 0.25s, but is too slow
-    ret.steeringPressed = self.update_steering_pressed(abs(-epas_status["EPAS_torsionBarTorque"]) > STEER_THRESHOLD, 5)
+    ret.steeringPressed = self.update_steering_pressed(abs(ret.steeringTorque) > STEER_THRESHOLD, 5)
 
     eac_status = self.can_defines["EPAS_sysStatus"]["EPAS_eacStatus"].get(int(epas_status["EPAS_eacStatus"]), None)
     ret.steerFaultPermanent = eac_status == "EAC_FAULT"
