@@ -143,7 +143,7 @@ static bool tesla_legacy_tx_hook(const CANPacket_t *to_send) {
   }
 
   // DAS_control: longitudinal control message
-  if (tesla_external_panda && (addr == das_control_msg)) {
+  if ((tesla_external_panda || tesla_hw1) && (addr == das_control_msg)) {
     // No AEB events may be sent by openpilot
     int aeb_event = GET_BYTE(to_send, 2) & 0x03U;
     if (aeb_event != 0) {
@@ -190,7 +190,7 @@ static bool tesla_legacy_fwd_hook(int bus_num, int addr) {
     }
 
     // DAS_control
-    if (tesla_external_panda && (addr == das_control_msg) && !tesla_legacy_aeb) {
+    if ((tesla_external_panda || tesla_hw1) && (addr == das_control_msg) && !tesla_legacy_aeb) {
       block_msg = true;
     }
   }
