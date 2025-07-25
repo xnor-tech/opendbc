@@ -37,7 +37,7 @@ class CarInterface(CarInterfaceBase):
     ret.steerAtStandstill = True
 
     ret.steerControlType = structs.CarParams.SteerControlType.angle
-    ret.radarUnavailable = not candidate == CAR.TESLA_MODEL_S_RAVEN
+    ret.radarUnavailable = not candidate == CAR.TESLA_MODEL_S_HW3
 
     ret.alphaLongitudinalAvailable = True
     if alpha_long or candidate in LEGACY_CARS:

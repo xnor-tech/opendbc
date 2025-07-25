@@ -73,8 +73,8 @@ class CAR(Platforms):
       Bus.radar: 'tesla_radar_bosch_generated',
     },
   )
-  TESLA_MODEL_S_RAVEN = TeslaPlatformConfig(
-    [CarDocs("Tesla Model S Raven", "All")],
+  TESLA_MODEL_S_HW3 = TeslaPlatformConfig(
+    [CarDocs("Tesla Model S HW3", "All")],
     CarSpecs(mass=2100., wheelbase=2.959, steerRatio=15.0),
     {
       Bus.chassis: 'tesla_can',
@@ -150,4 +150,4 @@ DBC = CAR.create_dbc_map()
 
 STEER_THRESHOLD = 1
 
-LEGACY_CARS = (CAR.TESLA_MODEL_S_HW2, CAR.TESLA_MODEL_S_RAVEN)
+LEGACY_CARS = (CAR.TESLA_MODEL_S_HW2, CAR.TESLA_MODEL_S_HW3)

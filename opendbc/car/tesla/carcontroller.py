@@ -59,7 +59,7 @@ def get_safety_CP():
 
 def get_safety_raven_CP():
   from opendbc.car.tesla.interface import CarInterface
-  return CarInterface.get_non_essential_params("TESLA_MODEL_S_RAVEN")
+  return CarInterface.get_non_essential_params("TESLA_MODEL_S_HW3")
 
 class CarController(CarControllerBase):
   def __init__(self, dbc_names, CP):
