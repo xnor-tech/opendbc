@@ -154,9 +154,7 @@ class CarState(CarStateBase):
     ret.vEgo, ret.aEgo = self.update_speed_kf(ret.vEgoRaw)
 
     # Gas pedal
-    pedal_status = cp_pt.vl["DI_torque1"]["DI_pedalPos"]
-    ret.gas = pedal_status / 100.0
-    ret.gasPressed = pedal_status > 0
+    ret.gasPressed = cp_pt.vl["DI_torque1"]["DI_pedalPos"] > 0
 
     # Brake pedal
     ret.brake = 0
