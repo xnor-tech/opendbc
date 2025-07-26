@@ -23,11 +23,12 @@ class RadarInterface(RadarInterfaceBase):
       self.num_points = 32
       self.trigger_msg = 878
 
-    for i in range(self.num_points):
-      messages.extend([
-        (f'RadarPoint{i}_A', 16),
-        (f'RadarPoint{i}_B', 16),
-      ])
+    if self.bosch_radar or self.continental_radar:
+      for i in range(self.num_points):
+        messages.extend([
+          (f'RadarPoint{i}_A', 16),
+          (f'RadarPoint{i}_B', 16),
+        ])
 
     self.rcp = None if CP.radarUnavailable else CANParser(DBC[CP.carFingerprint][Bus.radar], messages, CANBUS.radar)
     self.updated_messages = set()

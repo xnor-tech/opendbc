@@ -292,6 +292,10 @@ BO_ 923 DAS_status: 8 PARTY
  SG_ DAS_blindSpotRearLeft : 4|2@1+ (1,0) [0|3] ""  aps
  SG_ DAS_autopilotState : 0|4@1+ (1,0) [0|15] ""  aps
 
+BO_ 325 BrakeMessage: 8 XXX
+ SG_ Checksum : 0|8@1+ (1,0) [0|255] "" XXX
+ SG_ Counter : 8|4@1+ (1,0) [0|15] "" XXX
+ SG_ driverBrakeStatus : 29|2@1+ (1,0) [0|3] "" XXX
 
 CM_ BO_ 605 "Bytes change when toggling between FSD and AP, as well as Traffic Light and Stop Sign Control in TACC";
 

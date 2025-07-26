@@ -55,6 +55,12 @@ class CAR(Platforms):
      ],
     CarSpecs(mass=2072., wheelbase=2.890, steerRatio=12.0),
   )
+  TESLA_MODEL_Y_JUNIPER = TeslaPlatformConfig(
+    [
+      TeslaCarDocsHW3("Tesla Model Y JUNIPER (with HW4) 2025-26"),
+     ],
+    CarSpecs(mass=2072., wheelbase=2.890, steerRatio=12.0),
+  )
   TESLA_MODEL_X = TeslaPlatformConfig(
     [TeslaCarDocsHW4("Tesla Model X (with HW4) 2024")],
     CarSpecs(mass=2495., wheelbase=2.960, steerRatio=12.0),
@@ -156,6 +162,7 @@ class CarControllerParams:
 
 class TeslaSafetyFlags(IntFlag):
   LONG_CONTROL = 1
+  JUNIPER = 2
 
 
 class TeslaFlags(IntFlag):
