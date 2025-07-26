@@ -10,8 +10,18 @@ class RadarInterface(RadarInterfaceBase):
     super().__init__(CP)
     self.CP = CP
 
-    messages = [('RadarStatus', 16)]
-    self.num_points = 40
+    self.continental_radar = CP.carFingerprint in (CAR.TESLA_MODEL_S_HW3, )
+    self.bosch_radar = CP.carFingerprint in (CAR.TESLA_MODEL_S_HW1, CAR.TESLA_MODEL_S_HW2, )
+
+    messages = []
+    if self.continental_radar:
+      messages.append(('RadarStatus', 16))
+      self.num_points = 40
+      self.trigger_msg = 1119
+    elif self.bosch_radar:
+      messages.append(('TeslaRadarSguInfo', 10))
+      self.num_points = 32
+      self.trigger_msg = 878
 
     for i in range(self.num_points):
       messages.extend([
@@ -22,7 +32,6 @@ class RadarInterface(RadarInterfaceBase):
     self.rcp = None if CP.radarUnavailable else CANParser(DBC[CP.carFingerprint][Bus.radar], messages, CANBUS.radar)
     self.updated_messages = set()
     self.track_id = 0
-    self.trigger_msg = 1119
 
   def update(self, can_strings):
     if self.rcp is None:
@@ -40,12 +49,14 @@ class RadarInterface(RadarInterfaceBase):
     if not self.rcp.can_valid:
       ret.errors.canError = True
 
-    radar_status = self.rcp.vl['RadarStatus']
-    if radar_status['shortTermUnavailable']:
-      ret.errors.radarUnavailableTemporary = True
-
-    if radar_status['sensorBlocked'] or radar_status['vehDynamicsError']:
-      ret.errors.radarFault = True
+    if self.continental_radar:
+      radar_status = self.rcp.vl['RadarStatus']
+      ret.errors.radarUnavailableTemporary = radar_status['shortTermUnavailable']
+      ret.errors.radarFault = radar_status['sensorBlocked'] or radar_status['vehDynamicsError']
+    elif self.bosch_radar:
+      radar_status = self.rcp.vl['TeslaRadarSguInfo']
+      ret.errors.radarUnavailableTemporary = radar_status['RADC_SensorDirty']
+      ret.errors.radarFault = radar_status['RADC_HWFail'] or radar_status['RADC_SGUFail']
 
     # Radar tracks
     for i in range(self.num_points):
