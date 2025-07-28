@@ -1,6 +1,5 @@
-from cereal import car
 from opendbc.can.parser import CANParser
-from opendbc.car import Bus
+from opendbc.car import Bus, structs
 from opendbc.car.tesla.values import DBC, CANBUS, CAR
 from opendbc.car.interfaces import RadarInterfaceBase
 
@@ -18,33 +17,35 @@ class RadarInterface(RadarInterfaceBase):
       messages.append(('RadarStatus', 16))
       self.num_points = 40
       self.trigger_msg = 1119
+      self.radar_point_frq = 16
     elif self.bosch_radar:
       messages.append(('TeslaRadarSguInfo', 10))
       self.num_points = 32
       self.trigger_msg = 878
+      self.radar_point_frq = 8
 
     if self.bosch_radar or self.continental_radar:
       for i in range(self.num_points):
         messages.extend([
-          (f'RadarPoint{i}_A', 16),
-          (f'RadarPoint{i}_B', 16),
+          (f'RadarPoint{i}_A', self.radar_point_frq),
+          (f'RadarPoint{i}_B', self.radar_point_frq),
         ])
 
     self.rcp = None if CP.radarUnavailable else CANParser(DBC[CP.carFingerprint][Bus.radar], messages, CANBUS.radar)
     self.updated_messages = set()
     self.track_id = 0
 
-  def update(self, can_strings):
+  def update(self, can_msgs):
     if self.rcp is None:
       return super().update(None)
 
-    values = self.rcp.update(can_strings)
+    values = self.rcp.update(can_msgs)
     self.updated_messages.update(values)
 
     if self.trigger_msg not in self.updated_messages:
       return None
 
-    ret = car.RadarData.new_message()
+    ret = structs.RadarData()
 
     # Errors
     if not self.rcp.can_valid:
@@ -52,7 +53,7 @@ class RadarInterface(RadarInterfaceBase):
 
     if self.continental_radar:
       radar_status = self.rcp.vl['RadarStatus']
-      ret.errors.radarUnavailableTemporary = radar_status['shortTermUnavailable']
+      ret.errors.radarUnavailableTemporary = radar_status['shortTermUnavailable'] != 0
       ret.errors.radarFault = radar_status['sensorBlocked'] != 0 or radar_status['vehDynamicsError'] != 0
     elif self.bosch_radar:
       radar_status = self.rcp.vl['TeslaRadarSguInfo']
@@ -75,7 +76,7 @@ class RadarInterface(RadarInterfaceBase):
 
       # New track!
       if i not in self.pts:
-        self.pts[i] = car.RadarData.RadarPoint.new_message()
+        self.pts[i] = structs.RadarData.RadarPoint()
         self.pts[i].trackId = self.track_id
         self.track_id += 1
 
