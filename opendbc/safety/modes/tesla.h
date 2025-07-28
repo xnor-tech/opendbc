@@ -3,7 +3,6 @@
 #include "opendbc/safety/safety_declarations.h"
 
 static bool tesla_longitudinal = false;
-static bool tesla_juniper = false;
 static bool tesla_stock_aeb = false;
 
 // Only rising edges while controls are not allowed are considered for these systems:
@@ -25,8 +24,8 @@ static uint8_t tesla_get_counter(const CANPacket_t *msg) {
   } else if (addr == 0x488) {
     // Signal: DAS_steeringControlCounter
     cnt = GET_BYTE(msg, 2) & 0x0FU;
-  } else if ((addr == 0x257) || (addr == 0x118) || (!tesla_juniper && addr == 0x39d) || (addr == 0x286) || (addr == 0x311) || (tesla_juniper && addr == 0x145)) {
-    // Signal: DI_speedCounter, DI_systemStatusCounter, IBST_statusCounter, DI_locStatusCounter, UI_warningCounter, BrakeMessageCounter
+  } else if ((addr == 0x257) || (addr == 0x118) || (addr == 0x145) || (addr == 0x286) || (addr == 0x311)) {
+    // Signal: DI_speedCounter, DI_systemStatusCounter, ESP_statusCounter, DI_locStatusCounter, UI_warningCounter
     cnt = GET_BYTE(msg, 1) & 0x0FU;
   } else if (addr == 0x155) {
     // Signal: ESP_wheelRotationCounter
@@ -47,8 +46,8 @@ static int _tesla_get_checksum_byte(const int addr) {
   } else if (addr == 0x488) {
     // Signal: DAS_steeringControlChecksum
     checksum_byte = 3;
-  } else if ((addr == 0x257) || (addr == 0x118) || (!tesla_juniper && addr == 0x39d) || (addr == 0x286) || (addr == 0x311) || (tesla_juniper && addr == 0x145)) {
-    // Signal: DI_speedChecksum, DI_systemStatusChecksum, IBST_statusChecksum, DI_locStatusChecksum, UI_warningChecksum, BrakeMessageChecksum
+  } else if ((addr == 0x257) || (addr == 0x118) || (addr == 0x145) || (addr == 0x286) || (addr == 0x311)) {
+    // Signal: DI_speedChecksum, DI_systemStatusChecksum, ESP_statusChecksum, DI_locStatusChecksum, UI_warningChecksum
     checksum_byte = 0;
   } else {
   }
@@ -88,9 +87,9 @@ static bool tesla_get_quality_flag_valid(const CANPacket_t *msg) {
   bool valid = false;
   if (addr == 0x155) {
     valid = (GET_BYTE(msg, 5) & 0x1U) == 0x1U;  // ESP_wheelSpeedsQF
-  } else if (!tesla_juniper && addr == 0x39d) {
-    int user_brake_status = GET_BYTE(msg, 2) & 0x03U;
-    valid = (user_brake_status != 0) && (user_brake_status != 3);  // IBST_driverBrakeApply=NOT_INIT_OR_OFF, FAULT
+  } else if (addr == 0x145) {
+    int user_brake_status = (GET_BYTE(msg, 3) & 0x60U) >> 5;
+    valid = (user_brake_status != 0) && (user_brake_status != 3);  // ESP_driverBrakeApply=NotInit_orOff, Faulty_SNA
   } else {
   }
   return valid;
@@ -135,12 +134,8 @@ static void tesla_rx_hook(const CANPacket_t *msg) {
     }
 
     // Brake pressed
-    if (!tesla_juniper && addr == 0x39d) {
-      brake_pressed = (GET_BYTE(msg, 2) & 0x03U) == 2U;
-    }
-
-    if (tesla_juniper && addr == 0x145) {
-      brake_pressed = GET_BIT(msg, 30);
+    if (addr == 0x145) {
+      brake_pressed = ((GET_BYTE(msg, 3) & 0x60U) >> 5) == 2U;
     }
 
     // Cruise and Autopark/Summon state
@@ -343,9 +338,6 @@ static safety_config tesla_init(uint16_t param) {
   tesla_longitudinal = GET_FLAG(param, TESLA_FLAG_LONGITUDINAL_CONTROL);
 #endif
 
-  const int TESLA_FLAG_JUNIPER = 2;
-  tesla_juniper = GET_FLAG(param, TESLA_FLAG_JUNIPER);
-
   tesla_stock_aeb = false;
   tesla_stock_lkas = false;
   tesla_stock_lkas_prev = false;
@@ -361,36 +353,16 @@ static safety_config tesla_init(uint16_t param) {
     {.msg = {{0x155, 0, 8, 50U, .max_counter = 15U}, { 0 }, { 0 }}},                                // ESP_B (2nd speed in kph)
     {.msg = {{0x370, 0, 8, 100U, .max_counter = 15U, .ignore_quality_flag = true}, { 0 }, { 0 }}},  // EPAS3S_sysStatus (steering angle)
     {.msg = {{0x118, 0, 8, 100U, .max_counter = 15U, .ignore_quality_flag = true}, { 0 }, { 0 }}},  // DI_systemStatus (gas pedal)
-    {.msg = {{0x39d, 0, 5, 25U, .max_counter = 15U}, { 0 }, { 0 }}},                                // IBST_status (brakes) - non-juniper
-    {.msg = {{0x286, 0, 8, 10U, .max_counter = 15U, .ignore_quality_flag = true}, { 0 }, { 0 }}},   // DI_state (acc state)
-    {.msg = {{0x311, 0, 7, 10U, .max_counter = 15U, .ignore_quality_flag = true}, { 0 }, { 0 }}},   // UI_warning (blinkers, buckle switch & doors)
-  };
-
-  static RxCheck tesla_model3_y_juniper_rx_checks[] = {
-    {.msg = {{0x2b9, 2, 8, 25U, .max_counter = 7U, .ignore_quality_flag = true}, { 0 }, { 0 }}},    // DAS_control
-    {.msg = {{0x488, 2, 4, 50U, .max_counter = 15U, .ignore_quality_flag = true}, { 0 }, { 0 }}},   // DAS_steeringControl
-    {.msg = {{0x257, 0, 8, 50U, .max_counter = 15U, .ignore_quality_flag = true}, { 0 }, { 0 }}},   // DI_speed (speed in kph)
-    {.msg = {{0x155, 0, 8, 50U, .max_counter = 15U}, { 0 }, { 0 }}},                                // ESP_B (2nd speed in kph)
-    {.msg = {{0x370, 0, 8, 100U, .max_counter = 15U, .ignore_quality_flag = true}, { 0 }, { 0 }}},  // EPAS3S_sysStatus (steering angle)
-    {.msg = {{0x118, 0, 8, 100U, .max_counter = 15U, .ignore_quality_flag = true}, { 0 }, { 0 }}},  // DI_systemStatus (gas pedal)
-    {.msg = {{0x145, 0, 8, 50U, .max_counter = 15U, .ignore_quality_flag = true}, { 0 }, { 0 }}},   // BrakeMessage (brakes) - juniper
+    {.msg = {{0x145, 0, 8, 50U, .max_counter = 15U}, { 0 }, { 0 }}},                                // ESP_status (brakes)
     {.msg = {{0x286, 0, 8, 10U, .max_counter = 15U, .ignore_quality_flag = true}, { 0 }, { 0 }}},   // DI_state (acc state)
     {.msg = {{0x311, 0, 7, 10U, .max_counter = 15U, .ignore_quality_flag = true}, { 0 }, { 0 }}},   // UI_warning (blinkers, buckle switch & doors)
   };
 
   safety_config ret;
   if (tesla_longitudinal) {
-    if (tesla_juniper) {
-      ret = BUILD_SAFETY_CFG(tesla_model3_y_juniper_rx_checks, TESLA_M3_Y_LONG_TX_MSGS);
-    } else {
-      ret = BUILD_SAFETY_CFG(tesla_model3_y_rx_checks, TESLA_M3_Y_LONG_TX_MSGS);
-    }
+    ret = BUILD_SAFETY_CFG(tesla_model3_y_rx_checks, TESLA_M3_Y_LONG_TX_MSGS);
   } else {
-    if (tesla_juniper) {
-      ret = BUILD_SAFETY_CFG(tesla_model3_y_juniper_rx_checks, TESLA_M3_Y_TX_MSGS);
-    } else {
-      ret = BUILD_SAFETY_CFG(tesla_model3_y_rx_checks, TESLA_M3_Y_TX_MSGS);
-    }
+    ret = BUILD_SAFETY_CFG(tesla_model3_y_rx_checks, TESLA_M3_Y_TX_MSGS);
   }
   return ret;
 }

@@ -20,9 +20,6 @@ class CarInterface(CarInterfaceBase):
 
     ret.safetyConfigs = [get_safety_config(structs.CarParams.SafetyModel.tesla)]
 
-    if candidate == CAR.TESLA_MODEL_Y_JUNIPER:
-      ret.safetyConfigs[0].safetyParam |= TeslaSafetyFlags.JUNIPER.value
-
     ret.steerLimitTimer = 0.4
     ret.steerActuatorDelay = 0.1
     ret.steerAtStandstill = True

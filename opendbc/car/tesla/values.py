@@ -162,7 +162,6 @@ class CarControllerParams:
 
 class TeslaSafetyFlags(IntFlag):
   LONG_CONTROL = 1
-  JUNIPER = 2
 
 
 class TeslaFlags(IntFlag):
