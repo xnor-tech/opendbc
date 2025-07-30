@@ -61,7 +61,7 @@ class RadarInterface(RadarInterfaceBase):
         ret.errors.radarFault = True
     elif self.bosch_radar:
       radar_status = self.rcp.vl['TeslaRadarSguInfo']
-      if radar_status['RADC_HWFail'] or radar_status['RADC_SGUFail']:
+      if radar_status['RADC_HWFail']:
         ret.errors.radarFault = True
 
     # Radar tracks
