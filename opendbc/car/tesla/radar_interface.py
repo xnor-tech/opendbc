@@ -51,6 +51,8 @@ class RadarInterface(RadarInterfaceBase):
     if not self.rcp.can_valid:
       ret.errors.canError = True
 
+    ret.errors.radarFault = False
+    ret.errors.radarUnavailableTemporary = False
     if self.continental_radar:
       radar_status = self.rcp.vl['RadarStatus']
       if radar_status['shortTermUnavailable']:
