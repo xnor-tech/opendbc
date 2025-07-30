@@ -53,11 +53,14 @@ class RadarInterface(RadarInterfaceBase):
 
     if self.continental_radar:
       radar_status = self.rcp.vl['RadarStatus']
-      ret.errors.radarUnavailableTemporary = radar_status['shortTermUnavailable'] != 0
-      ret.errors.radarFault = radar_status['sensorBlocked'] != 0 or radar_status['vehDynamicsError'] != 0
+      if radar_status['shortTermUnavailable']:
+        ret.errors.radarUnavailableTemporary = True
+      if radar_status['sensorBlocked'] or radar_status['vehDynamicsError']:
+        ret.errors.radarFault = True
     elif self.bosch_radar:
       radar_status = self.rcp.vl['TeslaRadarSguInfo']
-      ret.errors.radarFault = radar_status['RADC_HWFail'] != 0 or radar_status['RADC_SGUFail'] != 0
+      if radar_status['RADC_HWFail'] or radar_status['RADC_SGUFail']:
+        ret.errors.radarFault = True
 
     # Radar tracks
     for i in range(self.num_points):
@@ -70,6 +73,12 @@ class RadarInterface(RadarInterfaceBase):
 
       # Check if it's a valid track
       if not msg_a['Tracked']:
+        if i in self.pts:
+          del self.pts[i]
+        continue
+
+      # Check if it's a valid point
+      if self.bosch_radar and (msg_a["LongDist"] > 250.0 or msg_a["LongDist"] <= 0 or msg_a["ProbExist"] < 50.0):
         if i in self.pts:
           del self.pts[i]
         continue
