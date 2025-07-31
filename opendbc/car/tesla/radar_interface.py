@@ -22,7 +22,7 @@ class RadarInterface(RadarInterfaceBase):
       messages.append(('TeslaRadarSguInfo', 10))
       self.num_points = 32
       self.trigger_msg = 878
-      self.radar_point_frq = 8
+      self.radar_point_frq = 10 if CP.carFingerprint == CAR.TESLA_MODEL_S_HW2 else 8
 
     if self.bosch_radar or self.continental_radar:
       for i in range(self.num_points):
