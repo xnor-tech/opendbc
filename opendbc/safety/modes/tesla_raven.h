@@ -19,47 +19,45 @@ static bool tesla_legacy_stock_lkas = false;
 static bool tesla_legacy_stock_lkas_prev = false;
 
 static void tesla_legacy_rx_hook(const CANPacket_t *msg) {
-  int bus = GET_BUS(msg);
-  int addr = GET_ADDR(msg);
 
-   // HW1, HW2 -> Chassis Bus (0)
+  // HW1, HW2 -> Chassis Bus (0)
   // HW3 -> Party Bus (0)
   // Steering angle: (0.1 * val) - 819.2 in deg.
-  if (!tesla_external_panda && bus == 0 && addr == 0x370) {
+  if (!tesla_external_panda && msg->bus == 0 && msg->addr == 0x370) {
     // Store it 1/10 deg to match steering request
-    const int angle_meas_new = (((GET_BYTE(msg, 4) & 0x3FU) << 8) | GET_BYTE(msg, 5)) - 8192U;
+    const int angle_meas_new = (((msg->data[4] & 0x3FU) << 8) | msg->data[5]) - 8192U;
     update_sample(&angle_meas, angle_meas_new);
 
-    const int hands_on_level = GET_BYTE(msg, 4) >> 6;  // handsOnLevel
-    const int eac_status = GET_BYTE(msg, 6) >> 5;      // eacStatus
-    const int eac_error_code = GET_BYTE(msg, 2) >> 4;  // eacErrorCode
+    const int hands_on_level = msg->data[4] >> 6;  // handsOnLevel
+    const int eac_status = msg->data[6] >> 5;      // eacStatus
+    const int eac_error_code = msg->data[2] >> 4;  // eacErrorCode
 
     // Disengage on normal user override, or if high angle rate fault from user overriding extremely quickly
     steering_disengage = (hands_on_level >= 3) || ((eac_status == 0) && (eac_error_code == 9));
   }
 
   // Vehicle speed (ESP_B: ESP_vehicleSpeed)
-  if (!tesla_external_panda && bus == chassis_bus && addr == 0x155) {
+  if (!tesla_external_panda && msg->bus == chassis_bus && msg->addr == 0x155) {
     // Vehicle speed: (0.05625 * val) * KPH_TO_MPS
-    float speed = ((GET_BYTE(msg, 6)| (GET_BYTE(msg, 5) << 8)) * 0.00999999978) * 0.27778;
+    float speed = ((msg->data[6]| (msg->data[5] << 8)) * 0.00999999978) * 0.27778;
     UPDATE_VEHICLE_SPEED(speed);
   }
 
   // Gas pressed
-  if ((tesla_external_panda || tesla_hw1) && bus == 0 && addr == di_torque1_msg) {
-    gas_pressed = GET_BYTE(msg, 6) != 0U;
+  if ((tesla_external_panda || tesla_hw1) && msg->bus == 0 && msg->addr == di_torque1_msg) {
+    gas_pressed = msg->data[6] != 0U;
   }
 
-  if ((tesla_external_panda && (bus == 0) && (addr == 0x1f8)) ||
-     (!tesla_external_panda && (bus == chassis_bus) && (addr == 0x20a))) {
-    brake_pressed = (((GET_BYTE(msg, 0) & 0x0CU) >> 2) != 1U);
+  if ((tesla_external_panda && (msg->bus == 0) && (msg->addr == 0x1f8)) ||
+     (!tesla_external_panda && (msg->bus == chassis_bus) && (msg->addr == 0x20a))) {
+    brake_pressed = (((msg->data[0] & 0x0CU) >> 2) != 1U);
   }
 
   // Cruise
-  if ((tesla_external_panda && (bus == 0) && (addr == 0x256)) ||
-     (!tesla_external_panda && (bus == chassis_bus) && (addr == 0x368))) {
+  if ((tesla_external_panda && (msg->bus == 0) && (msg->addr == 0x256)) ||
+     (!tesla_external_panda && (msg->bus == chassis_bus) && (msg->addr == 0x368))) {
       // Cruise state
-      int cruise_state = (GET_BYTE(msg, 1) >> 4) & 0x07U;
+      int cruise_state = (msg->data[1] >> 4) & 0x07U;
       bool cruise_engaged = (cruise_state == 2) ||  // ENABLED
                             (cruise_state == 3) ||  // STANDSTILL
                             (cruise_state == 4) ||  // OVERRIDE
@@ -69,16 +67,16 @@ static void tesla_legacy_rx_hook(const CANPacket_t *msg) {
       pcm_cruise_check(cruise_engaged);
    }
 
-  if (bus == 2) {
+  if (msg->bus == 2) {
     // DAS_control
-    if (tesla_external_panda && addr == das_control_msg) {
+    if (tesla_external_panda && msg->addr == das_control_msg) {
       // "AEB_ACTIVE"
-      tesla_legacy_aeb = (GET_BYTE(msg, 2) & 0x03U) == 1U;
+      tesla_legacy_aeb = (msg->data[2] & 0x03U) == 1U;
     }
 
     // DAS_steeringControl
-    if (!tesla_external_panda && addr == 0x488) {
-      int steering_control_type = GET_BYTE(msg, 2) >> 6;
+    if (!tesla_external_panda && msg->addr == 0x488) {
+      int steering_control_type = msg->data[2] >> 6;
       bool tesla_legacy_stock_lkas_now = steering_control_type == 2;  // "LANE_KEEP_ASSIST"
 
       // Only consider rising edges while controls are not allowed
@@ -115,15 +113,14 @@ static bool tesla_legacy_tx_hook(const CANPacket_t *msg) {
   };
 
   bool tx = true;
-  int addr = GET_ADDR(msg);
   bool violation = false;
 
   // Steering control: (0.1 * val) - 1638.35 in deg.
-  if (!tesla_external_panda && addr == 0x488) {
+  if (!tesla_external_panda && msg->addr == 0x488) {
     // We use 1/10 deg as a unit here
-    int raw_angle_can = ((GET_BYTE(msg, 0) & 0x7FU) << 8) | GET_BYTE(msg, 1);
+    int raw_angle_can = ((msg->data[0] & 0x7FU) << 8) | msg->data[1];
     int desired_angle = raw_angle_can - 16384;
-    int steer_control_type = GET_BYTE(msg, 2) >> 6;
+    int steer_control_type = msg->data[2] >> 6;
     bool steer_control_enabled = steer_control_type == 1;  // ANGLE_CONTROL
 
     if (steer_angle_cmd_checks_vm(desired_angle, steer_control_enabled, TESLA_STEERING_LIMITS, TESLA_LEGACY_STEERING_PARAMS)) {
@@ -143,9 +140,9 @@ static bool tesla_legacy_tx_hook(const CANPacket_t *msg) {
   }
 
   // DAS_control: longitudinal control message
-  if ((tesla_external_panda || tesla_hw1) && (addr == das_control_msg)) {
+  if ((tesla_external_panda || tesla_hw1) && (msg->addr == das_control_msg)) {
     // No AEB events may be sent by openpilot
-    int aeb_event = GET_BYTE(msg, 2) & 0x03U;
+    int aeb_event = msg->data[2] & 0x03U;
     if (aeb_event != 0) {
       violation = true;
     }
@@ -155,8 +152,8 @@ static bool tesla_legacy_tx_hook(const CANPacket_t *msg) {
       violation = true;
     }
 
-    int raw_accel_max = ((GET_BYTE(msg, 6) & 0x1FU) << 4) | (GET_BYTE(msg, 5) >> 4);
-    int raw_accel_min = ((GET_BYTE(msg, 5) & 0x0FU) << 5) | (GET_BYTE(msg, 4) >> 3);
+    int raw_accel_max = ((msg->data[6] & 0x1FU) << 4) | (msg->data[5] >> 4);
+    int raw_accel_min = ((msg->data[5] & 0x0FU) << 5) | (msg->data[4] >> 3);
 
     // Prevent both acceleration from being negative, as this could cause the car to reverse after coming to standstill
     if ((raw_accel_max < TESLA_LONG_LIMITS.inactive_accel) && (raw_accel_min < TESLA_LONG_LIMITS.inactive_accel)) {
