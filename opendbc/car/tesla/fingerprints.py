@@ -56,6 +56,7 @@ FW_VERSIONS = {
   CAR.TESLA_MODEL_S_HW1: {
     (Ecu.eps, 0x730, None): [
       b'1016704-00-HAA\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00',
+      b'\x10\x00A',
     ],
   },
   CAR.TESLA_MODEL_S_HW2: {
