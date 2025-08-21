@@ -17,7 +17,7 @@ class CarState(CarStateBase):
       if self.CP.carFingerprint == CAR.TESLA_MODEL_S_HW3:
         CANBUS.chassis = 1
         CANBUS.radar = 5
-      elif self.CP.carFingerprint in (CAR.TESLA_MODEL_S_HW1, CAR.TESLA_MODEL_X_HW1, ):
+      elif self.CP.carFingerprint inCAR.TESLA_MODEL_S_HW1:
         CANBUS.powertrain = CANBUS.party
         CANBUS.autopilot_powertrain = CANBUS.autopilot_party
 
