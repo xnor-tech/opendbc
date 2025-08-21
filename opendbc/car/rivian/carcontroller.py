@@ -39,9 +39,11 @@ class CarController(CarControllerBase, MadsCarController):
       can_sends.append(create_wheel_touch(self.packer, CS.sccm_wheel_touch, CC.enabled))
 
     # Longitudinal control
+    accel = 0
     if self.CP.openpilotLongitudinalControl:
       accel = float(np.clip(actuators.accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX))
-      can_sends.append(create_longitudinal(self.packer, self.frame, accel, CC.enabled, CC.longActive))
+      accel = accel if CC.longActive else 0
+      can_sends.append(create_longitudinal(self.packer, self.frame, accel, CC.enabled))
     else:
       interface_status = None
       if CC.cruiseControl.cancel:
@@ -57,6 +59,7 @@ class CarController(CarControllerBase, MadsCarController):
     new_actuators = actuators.as_builder()
     new_actuators.torque = apply_torque / steer_max
     new_actuators.torqueOutputCan = apply_torque
+    new_actuators.accel = accel
 
     self.frame += 1
     return new_actuators, can_sends
