@@ -2,7 +2,7 @@ import copy
 from opendbc.can import CANParser
 from opendbc.car import Bus, structs
 from opendbc.car.interfaces import CarStateBase
-from opendbc.car.rivian.values import DBC, GEAR_MAP
+from opendbc.car.rivian.values import CAR, DBC, GEAR_MAP
 from opendbc.car.common.conversions import Conversions as CV
 from opendbc.sunnypilot.car.rivian.carstate_ext import CarStateExt
 
@@ -49,11 +49,13 @@ class CarState(CarStateBase, CarStateExt):
     ret.steerFaultTemporary = cp.vl["EPAS_AdasStatus"]["EPAS_EacErrorCode"] != 0
 
     # Cruise state
-    speed = min(int(cp_adas.vl["ACM_tsrCmd"]["ACM_tsrSpdDisClsMain"]), 85)
-    self.last_speed = speed if speed != 0 else self.last_speed
-    ret.cruiseState.enabled = cp_cam.vl["ACM_Status"]["ACM_FeatureStatus"] == 1
-    # TODO: find cruise set speed on CAN
-    ret.cruiseState.speed = self.last_speed * CV.MPH_TO_MS  # detected speed limit
+    if self.CP.carFingerprint == CAR.RIVIAN_R1_GEN1:
+      speed = min(int(cp_adas.vl["ACM_tsrCmd"]["ACM_tsrSpdDisClsMain"]), 85)
+      self.last_speed = speed if speed != 0 else self.last_speed
+      ret.cruiseState.enabled = cp_cam.vl["ACM_Status"]["ACM_FeatureStatus"] == 1
+      # TODO: find cruise set speed on CAN
+      ret.cruiseState.speed = self.last_speed * CV.MPH_TO_MS  # detected speed limit
+
     if not self.CP.openpilotLongitudinalControl:
       ret.cruiseState.speed = -1
     ret.cruiseState.available = True  # cp.vl["VDM_AdasSts"]["VDM_AdasInterfaceStatus"] == 1
@@ -71,14 +73,20 @@ class CarState(CarStateBase, CarStateExt):
     ret.gearShifter = GEAR_MAP.get(int(cp.vl["VDM_PropStatus"]["VDM_Prndl_Status"]), GearShifter.unknown)
 
     # Doors
-    ret.doorOpen = any(cp_adas.vl["IndicatorLights"][door] != 2 for door in ("RearDriverDoor", "FrontPassengerDoor", "DriverDoor", "RearPassengerDoor"))
+    if self.CP.carFingerprint == CAR.RIVIAN_R1_GEN1:
+      ret.doorOpen = any(cp_adas.vl["IndicatorLights"][door] != 2 for door in ("RearDriverDoor", "FrontPassengerDoor", "DriverDoor", "RearPassengerDoor"))
+    else:
+      ret.doorOpen = False
 
     # Blinkers
     ret.leftBlinker = cp_adas.vl["IndicatorLights"]["TurnLightLeft"] in (1, 2)
     ret.rightBlinker = cp_adas.vl["IndicatorLights"]["TurnLightRight"] in (1, 2)
 
     # Seatbelt
-    ret.seatbeltUnlatched = cp.vl["RCM_Status"]["RCM_Status_IND_WARN_BELT_DRIVER"] != 0
+    if self.CP.carFingerprint == CAR.RIVIAN_R1_GEN1:
+      ret.seatbeltUnlatched = cp.vl["RCM_Status"]["RCM_Status_IND_WARN_BELT_DRIVER"] != 0
+    else:
+      ret.seatbeltUnlatched = False
 
     # Blindspot
     # ret.leftBlindspot = False
