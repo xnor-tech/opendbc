@@ -57,7 +57,7 @@ class CarInterface(CarInterfaceBase):
       ret.safetyConfigs = [
         get_safety_config(TESLA_LEGACY_SAFETY_MODEL, PARAM_HW1),
       ]
-    elif candidate in (CAR.TESLA_MODEL_S_HW2,):
+    elif candidate in (CAR.TESLA_MODEL_S_HW2, CAR.TESLA_MODEL_X_HW1,):
       ret.safetyConfigs = [
         get_safety_config(TESLA_LEGACY_SAFETY_MODEL, PARAM_HW2),
         get_safety_config(TESLA_LEGACY_SAFETY_MODEL, PARAM_HW2 | PARAM_EXTERNAL_PANDA),
