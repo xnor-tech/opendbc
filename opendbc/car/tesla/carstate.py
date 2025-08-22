@@ -17,7 +17,7 @@ class CarState(CarStateBase):
       if self.CP.carFingerprint == CAR.TESLA_MODEL_S_HW3:
         CANBUS.chassis = 1
         CANBUS.radar = 5
-      elif self.CP.carFingerprint == CAR.TESLA_MODEL_S_HW1:
+      elif self.CP.carFingerprint in (CAR.TESLA_MODEL_S_HW1, CAR.TESLA_MODEL_X_HW1, ):
         CANBUS.powertrain = CANBUS.party
         CANBUS.autopilot_powertrain = CANBUS.autopilot_party
 
@@ -203,11 +203,8 @@ class CarState(CarStateBase):
     ret.gearShifter = GEAR_MAP[self.can_defines["DI_torque2"]["DI_gear"].get(int(cp_chassis.vl["DI_torque2"]["DI_gear"]), "DI_GEAR_INVALID")]
 
     # Doors
-    if self.CP.carFingerprint == CAR.TESLA_MODEL_X_HW1:
-      ret.doorOpen = False
-    else:
-      DOORS = ["DOOR_STATE_FL", "DOOR_STATE_FR", "DOOR_STATE_RL", "DOOR_STATE_RR", "DOOR_STATE_FrontTrunk", "BOOT_STATE"]
-      ret.doorOpen = any((self.can_defines["GTW_carState"][door].get(int(cp_chassis.vl["GTW_carState"][door]), "OPEN") == "OPEN") for door in DOORS)
+    DOORS = ["DOOR_STATE_FL", "DOOR_STATE_FR", "DOOR_STATE_RL", "DOOR_STATE_RR", "DOOR_STATE_FrontTrunk", "BOOT_STATE"]
+    ret.doorOpen = any((self.can_defines["GTW_carState"][door].get(int(cp_chassis.vl["GTW_carState"][door]), "OPEN") == "OPEN") for door in DOORS)
 
     # Blinkers
     ret.leftBlinker = cp_chassis.vl["GTW_carState"]["BC_indicatorLStatus"] == 1
@@ -215,7 +212,7 @@ class CarState(CarStateBase):
 
     # Seatbelt
     if self.CP.carFingerprint == CAR.TESLA_MODEL_X_HW1:
-      ret.seatbeltUnlatched = False
+      ret.seatbeltUnlatched = cp_chassis.vl["RCM_status"]["RCM_buckleDriverStatus"] != 1
     elif self.CP.flags & TeslaFlags.NO_SDM1:
       ret.seatbeltUnlatched = cp_chassis.vl["DriverSeat"]["buckleStatus"] != 1
     else:

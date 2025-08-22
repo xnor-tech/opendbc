@@ -667,6 +667,31 @@ BO_ 1064 UI_telemetryControl: 8 GTW
 BO_ 522 BrakeMessage: 8 XXX
  SG_ driverBrakeStatus : 2|2@1+ (1,0) [0|3] "" XXX
 
+BO_ 529 RCM_status: 8 RCM
+ SG_ RCM_driverOrientationInitStatus : 2|3@0+ (1,0) [0|7] "" GTW,OCS
+ SG_ RCM_armStatus : 5|2@0+ (1,0) [0|3] "" GTW,OCS
+ SG_ RCM_warningIndicatorState : 7|2@0+ (1,0) [0|3] "" GTW,OCS
+ SG_ RCM_tellTalePassengerState : 9|2@0+ (1,0) [0|3] "" GTW,OCS,DAS
+ SG_ RCM_bucklePassengerStatus : 11|2@0+ (1,0) [0|3] "" GTW,OCS
+ SG_ RCM_tellTaleDriverState : 13|2@0+ (1,0) [0|3] "" GTW,OCS
+ SG_ RCM_buckleDriverStatus : 15|2@0+ (1,0) [0|3] "" GTW,OCS,DAS
+ SG_ RCM_seatTrackPositionDrvr : 19|2@0+ (1,0) [0|3] "" GTW,OCS
+ SG_ RCM_passAirbagRequest : 21|2@0+ (1,0) [0|3] "" GTW,OCS
+ SG_ RCM_chimeState1stRow : 23|2@0+ (1,0) [0|3] "" GTW,OCS
+ SG_ RCM_vinLearnFlag : 25|2@0+ (1,0) [0|3] "" GTW,OCS
+ SG_ RCM_hwConfigPin58 : 27|2@0+ (1,0) [0|3] "" GTW,OCS
+ SG_ RCM_hwConfigPin57 : 29|2@0+ (1,0) [0|3] "" GTW,OCS
+ SG_ RCM_hwConfigPin56 : 31|2@0+ (1,0) [0|3] "" GTW,OCS
+ SG_ RCM_passOccupantStatus : 33|2@0+ (1,0) [0|3] "" GTW,OCS
+ SG_ RCM_airbagCutoffSwStatus : 35|2@0+ (1,0) [0|3] "" GTW,OCS
+ SG_ RCM_privateCANStatus : 37|2@0+ (1,0) [0|3] "" GTW,OCS
+ SG_ RCM_publicCANStatus : 39|2@0+ (1,0) [0|3] "" GTW,OCS
+ SG_ RCM_edr2State : 45|2@0+ (1,0) [0|3] "" GTW,OCS
+ SG_ RCM_edr1State : 47|2@0+ (1,0) [0|3] "" GTW,OCS
+ SG_ RCM_buckle2ndRowStatus : 50|3@0+ (1,0) [0|3] "" GTW,OCS,DAS
+ SG_ RCM_statusCounter : 55|4@0+ (1,0) [0|15] "" GTW,OCS,DAS
+ SG_ RCM_statusChecksum : 63|8@0+ (1,0) [0|255] "" GTW,OCS,DAS
+
 BO_ 921 AutopilotStatus: 8 XXX
  SG_ autopilotStatus : 0|4@1+ (1,0) [0|0] "" XXX
  SG_ DAS_blindSpotRearLeft : 4|2@1+ (1,0) [0|0] "" XXX

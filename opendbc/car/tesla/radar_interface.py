@@ -31,7 +31,7 @@ class RadarInterface(RadarInterfaceBase):
           (f'RadarPoint{i}_B', self.radar_point_frq),
         ])
 
-    self.rcp = None if (CP.radarUnavailable or CP.carFingerprint in (CAR.TESLA_MODEL_S_HW2, CAR.TESLA_MODEL_X_HW1, )) else CANParser(DBC[CP.carFingerprint][Bus.radar], messages, CANBUS.radar)
+    self.rcp = None if CP.radarUnavailable else CANParser(DBC[CP.carFingerprint][Bus.radar], messages, CANBUS.radar)
     self.updated_messages = set()
     self.track_id = 0
 

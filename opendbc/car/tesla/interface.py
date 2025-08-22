@@ -53,11 +53,11 @@ class CarInterface(CarInterfaceBase):
     if not any(0x201 in f for f in fingerprint.values()):
       ret.flags |= TeslaFlags.NO_SDM1.value
 
-    if candidate in (CAR.TESLA_MODEL_S_HW1,):
+    if candidate in (CAR.TESLA_MODEL_S_HW1, CAR.TESLA_MODEL_X_HW1, ):
       ret.safetyConfigs = [
         get_safety_config(TESLA_LEGACY_SAFETY_MODEL, PARAM_HW1),
       ]
-    elif candidate in (CAR.TESLA_MODEL_S_HW2, CAR.TESLA_MODEL_X_HW1,):
+    elif candidate in (CAR.TESLA_MODEL_S_HW2,):
       ret.safetyConfigs = [
         get_safety_config(TESLA_LEGACY_SAFETY_MODEL, PARAM_HW2),
         get_safety_config(TESLA_LEGACY_SAFETY_MODEL, PARAM_HW2 | PARAM_EXTERNAL_PANDA),
@@ -73,7 +73,7 @@ class CarInterface(CarInterfaceBase):
     ret.steerAtStandstill = True
 
     ret.steerControlType = structs.CarParams.SteerControlType.angle
-    ret.radarUnavailable = False
+    ret.radarUnavailable = candidate in (CAR.TESLA_MODEL_S_HW2, CAR.TESLA_MODEL_X_HW1, )
 
     ret.alphaLongitudinalAvailable = True
     ret.openpilotLongitudinalControl = True

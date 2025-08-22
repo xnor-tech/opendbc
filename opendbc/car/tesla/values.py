@@ -72,7 +72,7 @@ class CAR(Platforms):
     {
       Bus.chassis: 'tesla_can',
       Bus.party: 'tesla_can',
-      Bus.pt: 'tesla_powertrain',
+      Bus.pt: 'tesla_can',
       Bus.radar: 'tesla_radar_bosch_generated',
     },
   )

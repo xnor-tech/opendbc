@@ -27,7 +27,7 @@ class CarController(CarControllerBase):
     self.VM = VehicleModel(get_safety_CP())
 
     if CP.carFingerprint in LEGACY_CARS:
-      if CP.carFingerprint == CAR.TESLA_MODEL_S_HW1:
+      if CP.carFingerprint in (CAR.TESLA_MODEL_S_HW1, CAR.TESLA_MODEL_X_HW1,):
         CANBUS.powertrain = CANBUS.party
         CANBUS.autopilot_powertrain = CANBUS.autopilot_party
 
