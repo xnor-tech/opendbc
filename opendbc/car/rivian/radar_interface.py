@@ -50,15 +50,17 @@ class RadarInterface(RadarInterfaceBase):
     for addr in range(RADAR_START_ADDR, RADAR_START_ADDR + RADAR_MSG_COUNT):
       msg = self.rcp.vl[f"RADAR_TRACK_{addr:x}"]
 
-      valid_state = msg['STATE'] != 0  # 0: Empty
+      # STATE 1=New 2=New_updated 3=Updated 4=Coasting 7=New_coasting
+      valid_state = msg['STATE'] in (1, 2, 3, 4, 7)
       if valid_state:
-        if addr not in self.pts or msg['STATE'] == 1:  # 1: New
+        if addr not in self.pts or msg['STATE'] in (1, 2, 7):
           self.pts[addr] = structs.RadarData.RadarPoint()
           self.pts[addr].trackId = self.track_id
           self.track_id += 1
 
+        # MODE 1=SRR 2=LRR 3=SRR_and_LRR
+        self.pts[addr].measured = msg['MODE'] in (1, 2, 3) and msg['STATE'] in (2, 3)
         azimuth = math.radians(msg['AZIMUTH'])
-        self.pts[addr].measured = msg['MODE'] in (1, 2, 3)  # 1: SRR 2: LRR 3: SRR_and_LRR
         self.pts[addr].dRel = math.cos(azimuth) * msg['LONG_DIST']
         self.pts[addr].yRel = 0.5 * -math.sin(azimuth) * msg['LONG_DIST']
         self.pts[addr].vRel = msg['REL_SPEED']
