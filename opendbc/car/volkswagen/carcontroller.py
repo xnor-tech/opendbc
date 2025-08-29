@@ -5,7 +5,7 @@ from opendbc.car.lateral import apply_driver_steer_torque_limits
 from opendbc.car.common.conversions import Conversions as CV
 from opendbc.car.interfaces import CarControllerBase
 from opendbc.car.volkswagen import mqbcan, pqcan, mebcan
-from opendbc.car.volkswagen.values import CANBUS, CarControllerParams, VolkswagenFlags
+from opendbc.car.volkswagen.values import CanBus, CarControllerParams, VolkswagenFlags
 
 VisualAlert = structs.CarControl.HUDControl.VisualAlert
 LongCtrlState = structs.CarControl.Actuators.LongControlState
@@ -62,7 +62,7 @@ class CarController(CarControllerBase):
           apply_curvature = 0
           apply_steer_power = 0
 
-        can_sends.append(mebcan.create_steering_control(self.packer_pt, CANBUS.pt, apply_curvature, qfk_enable, apply_steer_power))
+        can_sends.append(mebcan.create_steering_control(self.packer_pt, self.CAN.pt, apply_curvature, qfk_enable, apply_steer_power))
 
         self.apply_curvature_last = apply_curvature
         self.apply_steer_power_last = apply_steer_power
@@ -77,44 +77,44 @@ class CarController(CarControllerBase):
         # MQB racks reset the uninterrupted steering timer after a single frame
         # of HCA disabled; this is done whenever output happens to be zero.
 
-      if CC.latActive:
-        new_torque = int(round(actuators.torque * self.CCP.STEER_MAX))
-        apply_torque = apply_driver_steer_torque_limits(new_torque, self.apply_torque_last, CS.out.steeringTorque, self.CCP)
-        self.hca_frame_timer_running += self.CCP.STEER_STEP
-        if self.apply_torque_last == apply_torque:
-          self.hca_frame_same_torque += self.CCP.STEER_STEP
-          if self.hca_frame_same_torque > self.CCP.STEER_TIME_STUCK_TORQUE / DT_CTRL:
-            apply_torque -= (1, -1)[apply_torque < 0]
+        if CC.latActive:
+          new_torque = int(round(actuators.torque * self.CCP.STEER_MAX))
+          apply_torque = apply_driver_steer_torque_limits(new_torque, self.apply_torque_last, CS.out.steeringTorque, self.CCP)
+          self.hca_frame_timer_running += self.CCP.STEER_STEP
+          if self.apply_torque_last == apply_torque:
+            self.hca_frame_same_torque += self.CCP.STEER_STEP
+            if self.hca_frame_same_torque > self.CCP.STEER_TIME_STUCK_TORQUE / DT_CTRL:
+              apply_torque -= (1, -1)[apply_torque < 0]
+              self.hca_frame_same_torque = 0
+          else:
             self.hca_frame_same_torque = 0
+          hca_enabled = abs(apply_torque) > 0
         else:
-          self.hca_frame_same_torque = 0
-        hca_enabled = abs(apply_torque) > 0
-      else:
-        hca_enabled = False
-        apply_torque = 0
+          hca_enabled = False
+          apply_torque = 0
 
-      if not hca_enabled:
-        self.hca_frame_timer_running = 0
+        if not hca_enabled:
+          self.hca_frame_timer_running = 0
 
-      self.eps_timer_soft_disable_alert = self.hca_frame_timer_running > self.CCP.STEER_TIME_ALERT / DT_CTRL
-      self.apply_torque_last = apply_torque
-      can_sends.append(self.CCS.create_steering_control(self.packer_pt, self.CAN.pt, apply_torque, hca_enabled))
+        self.eps_timer_soft_disable_alert = self.hca_frame_timer_running > self.CCP.STEER_TIME_ALERT / DT_CTRL
+        self.apply_torque_last = apply_torque
+        can_sends.append(self.CCS.create_steering_control(self.packer_pt, self.CAN.pt, apply_torque, hca_enabled))
 
-      if self.CP.flags & VolkswagenFlags.STOCK_HCA_PRESENT:
-        # Pacify VW Emergency Assist driver inactivity detection by changing its view of driver steering input torque
-        # to the greatest of actual driver input or 2x openpilot's output (1x openpilot output is not enough to
-        # consistently reset inactivity detection on straight level roads). See commaai/openpilot#23274 for background.
-        ea_simulated_torque = float(np.clip(apply_torque * 2, -self.CCP.STEER_MAX, self.CCP.STEER_MAX))
-        if abs(CS.out.steeringTorque) > abs(ea_simulated_torque):
-          ea_simulated_torque = CS.out.steeringTorque
-        can_sends.append(self.CCS.create_eps_update(self.packer_pt, self.CAN.cam, CS.eps_stock_values, ea_simulated_torque))
+        if self.CP.flags & VolkswagenFlags.STOCK_HCA_PRESENT:
+          # Pacify VW Emergency Assist driver inactivity detection by changing its view of driver steering input torque
+          # to the greatest of actual driver input or 2x openpilot's output (1x openpilot output is not enough to
+          # consistently reset inactivity detection on straight level roads). See commaai/openpilot#23274 for background.
+          ea_simulated_torque = float(np.clip(apply_torque * 2, -self.CCP.STEER_MAX, self.CCP.STEER_MAX))
+          if abs(CS.out.steeringTorque) > abs(ea_simulated_torque):
+            ea_simulated_torque = CS.out.steeringTorque
+          can_sends.append(self.CCS.create_eps_update(self.packer_pt, self.CAN.cam, CS.eps_stock_values, ea_simulated_torque))
 
     # TODO: refactor a bit
     if self.CP.flags & VolkswagenFlags.MEB:
       if self.frame % 2 == 0:
-        can_sends.append(mebcan.create_ea_control(self.packer_pt, CANBUS.pt))
+        can_sends.append(mebcan.create_ea_control(self.packer_pt, self.CAN.pt))
       if self.frame % 50 == 0:
-        can_sends.append(mebcan.create_ea_hud(self.packer_pt, CANBUS.pt))
+        can_sends.append(mebcan.create_ea_hud(self.packer_pt, self.CAN.pt))
 
     # **** Acceleration Controls ******************************************** #
 
