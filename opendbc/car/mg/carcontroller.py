@@ -1,4 +1,3 @@
-import numpy as np
 from opendbc.can.packer import CANPacker
 from opendbc.car import Bus
 from opendbc.car.lateral import apply_driver_steer_torque_limits

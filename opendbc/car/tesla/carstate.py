@@ -232,7 +232,6 @@ class CarState(CarStateBase):
 
     return ret
 
-
   @staticmethod
   def get_can_parsers(CP):
     if CP.carFingerprint in LEGACY_CARS:

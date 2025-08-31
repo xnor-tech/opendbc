@@ -120,7 +120,7 @@ BO_ 492 EPS_HSC2_FrP03: 8 EPS
  SG_ ChLKARespToqHSC2 : 2|11@0+ (0.01,-10.24) [-10.24|10.23] "Nm"  FVCM
  SG_ ChLKARespToqPVHSC2 : 22|15@0+ (1,0) [0|32767] ""  FVCM
  SG_ ChLKARespToqVHSC2 : 3|1@0+ (1,0) [0|1] ""  FVCM
- SG_ DrvrStrgDlvrdToqHSC2 : 34|11@0+ (0.01,-10.24) [-10.24|10.23] "Nm"  FVCM
+ SG_ DrvrStrgDlvrdToqHSC2 : 34|11@0+ (1,-1024) [-10.24|10.23] "Nm"  FVCM
  SG_ DrvrStrgDlvrdToqVHSC2 : 55|1@0+ (1,0) [0|1] ""  FVCM
 
 BO_ 509 FVCM_HSC2_FrP03: 8 FVCM
@@ -187,6 +187,18 @@ BO_ 588 SCS_HSC2_FrP22: 8 SCSABS
  SG_ WhlGndVelLDrvn_RadarHSC2 : 45|14@0+ (0.03125,0) [0|511.969] "km/h"  FDR
  SG_ WhlGndVelRDrvnV_RadarHSC2 : 4|1@0+ (1,0) [0|1] ""  FDR
  SG_ WhlGndVelRDrvn_RadarHSC2 : 29|14@0+ (0.03125,0) [0|511.969] "km/h"  FDR
+
+BO_ 593 SCS_HSC2_FrP24: 8 SCSABS
+ SG_ ChACCAccReqRespHSC2 : 5|3@0+ (1,0) [0|7] ""  FDR
+ SG_ ChACCAEBAlvRlngCtr_RadarHSC2 : 20|4@0+ (1,0) [0|15] ""  FDR
+ SG_ ChACCAEBBrkJerkReqRespHSC2 : 10|3@0+ (1,0) [0|7] ""  FDR
+ SG_ ChACCAEBChksm_RadarHSC2 : 63|8@0+ (1,0) [0|255] ""  FDR
+ SG_ ChACCReqFlrStsHSC2 : 15|2@0+ (1,0) [0|3] ""  FDR
+ SG_ ChAEBDclReqRespHSC2 : 23|3@0+ (1,0) [0|7] ""  FDR
+ SG_ ChAEBHydBrkAstReqRespHSC2 : 2|3@0+ (1,0) [0|7] ""  FDR
+ SG_ ChAEBPrflReqRespHSC2 : 13|3@0+ (1,0) [0|7] ""  FDR
+ SG_ VehSdslStsHSC2 : 7|2@0+ (1,0) [0|3] ""  FDR
+ SG_ VehTrgtLongtAccHSC2 : 31|8@0+ (0.05,-7) [-7|5.75] ""  FDR
 
 BO_ 851 SCS_HSC2_FrP15: 8 SCSABS
  SG_ VehSpdAvgDrvnHSC2 : 6|15@0+ (0.015625,0) [0|511.984] "km/h"  FVCM
@@ -267,6 +279,13 @@ VAL_ 588 RDrvnWhlRotlDircnHSC2 3 "Initial/Invalid" 2 "Backward" 1 "Forward" 0 "U
 VAL_ 588 WhlBrkPrsStsHSC2 1 "No brake force" 0 "Exist brake force" ;
 VAL_ 588 WhlGndVelLDrvnV_RadarHSC2 1 "Invalid" 0 "Valid" ;
 VAL_ 588 WhlGndVelRDrvnV_RadarHSC2 1 "Invalid" 0 "Valid" ;
+VAL_ 593 ChACCAccReqRespHSC2 7 "reserved" 6 "reserved" 4 "pre-condition not satisfied" 3 "control not allowed for error" 2 "lost arbitration" 1 "request honored" 0 "no request" ;
+VAL_ 593 ChACCAEBBrkJerkReqRespHSC2 7 "reserve" 6 "reserve" 4 "pre-condition not satisfied" 3 "control not allowed for error" 2 "lost arbitration" 1 "request honored" 0 "no request" ;
+VAL_ 593 ChACCReqFlrStsHSC2 3 "not defined" 2 "irreversible error" 1 "reversible error" 0 "No error" ;
+VAL_ 593 ChAEBDclReqRespHSC2 7 "reserved" 6 "reserved" 4 "pre-condition not satisfied" 3 "control not allowed for error" 2 "lost arbitration" 1 "request honored" 0 "no request" ;
+VAL_ 593 ChAEBHydBrkAstReqRespHSC2 7 "reserve" 6 "reserve" 4 "pre-condition not satisfied" 3 "control not allowed for error" 2 "lost arbitration" 1 "request honored" 0 "no request" ;
+VAL_ 593 ChAEBPrflReqRespHSC2 7 "reserve" 6 "reserve" 4 "pre-condition not satisfied" 3 "control not allowed for error" 2 "lost arbitration" 1 "request honored" 0 "no request" ;
+VAL_ 593 VehSdslStsHSC2 3 "reserved" 2 "invalid (short unavailability, max 3s)" 1 "standstill" 0 "not standstill" ;
 VAL_ 851 VehSpdAvgDrvnVHSC2 1 "Invalid" 0 "Valid" ;
 VAL_ 851 VehSpdAvgNonDrvnVHSC2 1 "Invalid" 0 "Valid" ;
 VAL_ 1130 BntOpenStsHSC2 3 "Reserved" 2 "Bonnet Switch Disconnect" 1 "Bonnet Open" 0 "Bonnet Closed" ;

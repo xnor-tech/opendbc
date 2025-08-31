@@ -14,13 +14,12 @@ class CarState(CarStateBase):
   def update(self, can_parsers) -> structs.CarState:
     cp = can_parsers[Bus.pt]
     cp_cam = can_parsers[Bus.cam]
-    cp_radar = can_parsers[Bus.radar]
     ret = structs.CarState()
 
     # Vehicle speed
     ret.vEgoRaw = cp.vl["SCS_HSC2_FrP15"]["VehSpdAvgDrvnHSC2"] * CV.KPH_TO_MS
     ret.vEgo, ret.aEgo = self.update_speed_kf(ret.vEgoRaw)
-    ret.standstill = abs(ret.vEgoRaw) < 0.01
+    ret.standstill = cp.vl["SCS_HSC2_FrP24"]["VehSdslStsHSC2"] == 1
 
     # Gas pedal
     ret.gasPressed = cp.vl["GW_HSC2_HCU_FrP00"]["EPTAccelActuPosHSC2"] > 0

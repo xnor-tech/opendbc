@@ -3,33 +3,32 @@
 #include "opendbc/safety/safety_declarations.h"
 
 static void mg_rx_hook(const CANPacket_t *msg) {
-  if (msg->bus == 0)  {
+  if (msg->bus == 0U)  {
     // Vehicle speed
-    if (msg->addr == 0x353) {
+    if (msg->addr == 0x353U) {
       float speed = (((msg->data[0] & 0x7FU) << 8) | msg->data[1]) * 0.015625;
       vehicle_moving = speed > 0.0;
       UPDATE_VEHICLE_SPEED(speed * KPH_TO_MS);
     }
 
     // Gas pressed
-    if (msg->addr == 0xaf) {
-      gas_pressed = msg->data[0] != 0;
+    if (msg->addr == 0xafU) {
+      gas_pressed = msg->data[0] != 0U;
     }
 
     // Driver torque
-    if (msg->addr == 0x1ec) {
-      int torque_driver_new = ((msg->data[4] & 0x7U) << 8) | msg->data[5];
-      torque_driver_new = torque_driver_new - 1024U;
+    if (msg->addr == 0x1ecU) {
+      int torque_driver_new = (((msg->data[4] & 0x7U) << 8) | msg->data[5]) - 1024U;
       update_sample(&torque_driver, torque_driver_new);
     }
 
     // Brake pressed
-    if (msg->addr == 0x1b6) {
+    if (msg->addr == 0x1b6U) {
       brake_pressed = GET_BIT(msg, 10U);
     }
 
     // Cruise state
-    if (msg->addr == 0x242) {
+    if (msg->addr == 0x242U) {
       int cruise_state = (msg->data[5] & 0x38U) >> 3;
       bool cruise_engaged = (cruise_state == 2) ||  // Active
                             (cruise_state == 3);    // Override
@@ -41,9 +40,9 @@ static void mg_rx_hook(const CANPacket_t *msg) {
 static bool mg_tx_hook(const CANPacket_t *msg) {
   const TorqueSteeringLimits MG_STEERING_LIMITS = {
     .max_torque = 300,
-    .max_rate_up = 10,
-    .max_rate_down = 15,
-    .max_rt_delta = 125,
+    .max_rate_up = 4,
+    .max_rate_down = 10,
+    .max_rt_delta = 75,
     .driver_torque_multiplier = 2,
     .driver_torque_allowance = 100,
     .type = TorqueDriverLimited,
@@ -53,9 +52,8 @@ static bool mg_tx_hook(const CANPacket_t *msg) {
   bool violation = false;
 
   // Steering control
-  if (msg->addr == 0x1fd) {
-    int desired_torque = ((msg->data[0] & 0x7U) << 8) | msg->data[1];
-    desired_torque = desired_torque - 1024U;
+  if (msg->addr == 0x1fdU) {
+    int desired_torque = (((msg->data[0] & 0x7U) << 8) | msg->data[1]) - 1024U;
     bool steer_req = GET_BIT(msg, 35U);
 
     violation |= steer_torque_cmd_checks(desired_torque, steer_req, MG_STEERING_LIMITS);

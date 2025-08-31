@@ -7,9 +7,9 @@ static bool tesla_hw1 = false;
 static bool tesla_hw2 = false;
 static bool tesla_hw3 = false;
 
-static int chassis_bus = 0;
-static int das_control_msg = 0x2bf;
-static int di_torque1_msg = 0x106;
+static int chassis_bus = 0U;
+static int das_control_msg = 0x2bfU;
+static int di_torque1_msg = 0x106U;
 
 static bool tesla_legacy_aeb = false;
 
@@ -20,10 +20,8 @@ static bool tesla_legacy_stock_lkas_prev = false;
 
 static void tesla_legacy_rx_hook(const CANPacket_t *msg) {
 
-  // HW1, HW2 -> Chassis Bus (0)
-  // HW3 -> Party Bus (0)
   // Steering angle: (0.1 * val) - 819.2 in deg.
-  if (!tesla_external_panda && msg->bus == 0 && msg->addr == 0x370) {
+  if (!tesla_external_panda && (msg->bus == 0U) && (msg->addr == 0x370U)) {
     // Store it 1/10 deg to match steering request
     const int angle_meas_new = (((msg->data[4] & 0x3FU) << 8) | msg->data[5]) - 8192U;
     update_sample(&angle_meas, angle_meas_new);
@@ -37,25 +35,25 @@ static void tesla_legacy_rx_hook(const CANPacket_t *msg) {
   }
 
   // Vehicle speed (ESP_B: ESP_vehicleSpeed)
-  if (!tesla_external_panda && msg->bus == chassis_bus && msg->addr == 0x155) {
+  if ((!tesla_external_panda) && (msg->bus == chassis_bus) && (msg->addr == 0x155U)) {
     // Vehicle speed: (0.05625 * val) * KPH_TO_MPS
     float speed = ((msg->data[6]| (msg->data[5] << 8)) * 0.00999999978) * 0.27778;
     UPDATE_VEHICLE_SPEED(speed);
   }
 
   // Gas pressed
-  if ((tesla_external_panda || tesla_hw1) && msg->bus == 0 && msg->addr == di_torque1_msg) {
+  if (((tesla_external_panda) || (tesla_hw1)) && (msg->bus == 0U) && (msg->addr == di_torque1_msg)) {
     gas_pressed = msg->data[6] != 0U;
   }
 
-  if ((tesla_external_panda && (msg->bus == 0) && (msg->addr == 0x1f8)) ||
-     (!tesla_external_panda && (msg->bus == chassis_bus) && (msg->addr == 0x20a))) {
+  if (((tesla_external_panda) && (msg->bus == 0U) && (msg->addr == 0x1f8U)) ||
+     ((!tesla_external_panda) && (msg->bus == chassis_bus) && (msg->addr == 0x20aU))) {
     brake_pressed = (((msg->data[0] & 0x0CU) >> 2) != 1U);
   }
 
   // Cruise
-  if ((tesla_external_panda && (msg->bus == 0) && (msg->addr == 0x256)) ||
-     (!tesla_external_panda && (msg->bus == chassis_bus) && (msg->addr == 0x368))) {
+  if (((tesla_external_panda) && (msg->bus == 0U) && (msg->addr == 0x256U)) ||
+     ((!tesla_external_panda) && (msg->bus == chassis_bus) && (msg->addr == 0x368U))) {
       // Cruise state
       int cruise_state = (msg->data[1] >> 4) & 0x07U;
       bool cruise_engaged = (cruise_state == 2) ||  // ENABLED
@@ -67,15 +65,15 @@ static void tesla_legacy_rx_hook(const CANPacket_t *msg) {
       pcm_cruise_check(cruise_engaged);
    }
 
-  if (msg->bus == 2) {
+  if (msg->bus == 2U) {
     // DAS_control
-    if (tesla_external_panda && msg->addr == das_control_msg) {
+    if ((tesla_external_panda) && (msg->addr == das_control_msg)) {
       // "AEB_ACTIVE"
       tesla_legacy_aeb = (msg->data[2] & 0x03U) == 1U;
     }
 
     // DAS_steeringControl
-    if (!tesla_external_panda && msg->addr == 0x488) {
+    if ((!tesla_external_panda) && (msg->addr == 0x488U)) {
       int steering_control_type = msg->data[2] >> 6;
       bool tesla_legacy_stock_lkas_now = steering_control_type == 2;  // "LANE_KEEP_ASSIST"
 
@@ -116,7 +114,7 @@ static bool tesla_legacy_tx_hook(const CANPacket_t *msg) {
   bool violation = false;
 
   // Steering control: (0.1 * val) - 1638.35 in deg.
-  if (!tesla_external_panda && msg->addr == 0x488) {
+  if (!tesla_external_panda && (msg->addr == 0x488U)) {
     // We use 1/10 deg as a unit here
     int raw_angle_can = ((msg->data[0] & 0x7FU) << 8) | msg->data[1];
     int desired_angle = raw_angle_can - 16384;
@@ -177,17 +175,17 @@ static bool tesla_legacy_fwd_hook(int bus_num, int addr) {
 
   if (bus_num == 2) {
     // APS_eacMonitor
-    if (!tesla_external_panda && addr == 0x27d) {
+    if ((!tesla_external_panda) && (addr == 0x27dU)) {
       block_msg = true;
     }
 
     // DAS_steeringControl
-    if (!tesla_external_panda && (addr == 0x488) && !tesla_legacy_stock_lkas) {
+    if ((!tesla_external_panda) && (addr == 0x488U) && (!tesla_legacy_stock_lkas)) {
       block_msg = true;
     }
 
     // DAS_control
-    if ((tesla_external_panda || tesla_hw1) && (addr == das_control_msg) && !tesla_legacy_aeb) {
+    if (((tesla_external_panda) || (tesla_hw1)) && (addr == das_control_msg) && (!tesla_legacy_aeb)) {
       block_msg = true;
     }
   }
@@ -233,8 +231,8 @@ static safety_config tesla_legacy_init(uint16_t param) {
       {.msg = {{0x256, 0, 8, 10U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // DI_state
     };
     ret = BUILD_SAFETY_CFG(tesla_legacy_pt_rx_checks, TESLA_LEGACY_PT_MSGS);
-  } else if(tesla_hw3){
-    chassis_bus = 1;
+  } else if (tesla_hw3){
+    chassis_bus = 1U;
     static RxCheck tesla_legacy_hw3_rx_checks[] = {
       {.msg = {{0x370, 0, 8, 100U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // EPAS_sysStatus (100hz)
       {.msg = {{0x155, 1, 8, 50U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // ESP_private1
@@ -242,9 +240,9 @@ static safety_config tesla_legacy_init(uint16_t param) {
       {.msg = {{0x368, 1, 8, 10U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // DI_state
     };
     ret = BUILD_SAFETY_CFG(tesla_legacy_hw3_rx_checks, TESLA_TX_LEGACY_MSGS);
-  } else if(tesla_hw1){
-    di_torque1_msg = 0x108;
-    das_control_msg = 0x2b9;
+  } else if (tesla_hw1){
+    di_torque1_msg = 0x108U;
+    das_control_msg = 0x2b9U;
     static RxCheck tesla_legacy_hw1_rx_checks[] = {
       {.msg = {{0x108, 0, 8, 100U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},  // DI_torque1
       {.msg = {{0x2b9, 2, 8, 25U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // DAS_control

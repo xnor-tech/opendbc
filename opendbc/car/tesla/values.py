@@ -58,7 +58,7 @@ class CAR(Platforms):
   )
   TESLA_MODEL_Y_JUNIPER = TeslaPlatformConfig(
     [
-      TeslaCarDocsHW3("Tesla Model Y JUNIPER (with HW4) 2025-26"),
+      TeslaCarDocsHW4("Tesla Model Y JUNIPER (with HW4) 2025-26"),
      ],
     CarSpecs(mass=2072., wheelbase=2.890, steerRatio=12.0),
   )
@@ -67,7 +67,7 @@ class CAR(Platforms):
     CarSpecs(mass=2495., wheelbase=2.960, steerRatio=12.0),
   )
   TESLA_MODEL_X_HW1 = TeslaPlatformConfig(
-    [CarDocs("Tesla Model X (with HW1)", "All")],
+    [CarDocs("Tesla Model X (with HW1) 2014-16", "All", car_parts=CarParts.common([CarHarness.tesla_model_x_hw1]))],
     CarSpecs(mass=2447., wheelbase=2.967, steerRatio=15.0),
     {
       Bus.chassis: 'tesla_can',
@@ -81,7 +81,7 @@ class CAR(Platforms):
     CarSpecs(mass=2166., wheelbase=2.960, steerRatio=12.0),
   )
   TESLA_MODEL_S_HW1 = TeslaPlatformConfig(
-    [CarDocs("Tesla Model S HW1", "All")],
+    [CarDocs("Tesla Model S (with HW1) 2014-16", "All", car_parts=CarParts.common([CarHarness.tesla_model_s_hw1]))],
     CarSpecs(mass=2100., wheelbase=2.959, steerRatio=15.0),
     {
       Bus.chassis: 'tesla_can',
@@ -91,7 +91,7 @@ class CAR(Platforms):
     },
   )
   TESLA_MODEL_S_HW2 = TeslaPlatformConfig(
-    [CarDocs("Tesla Model S HW2", "All")],
+    [CarDocs("Tesla Model S (with HW2) 2017-19", "All", car_parts=CarParts.common([CarHarness.tesla_model_sx_hw2]))],
     CarSpecs(mass=2100., wheelbase=2.959, steerRatio=15.0),
     {
       Bus.chassis: 'tesla_can',
@@ -101,7 +101,7 @@ class CAR(Platforms):
     },
   )
   TESLA_MODEL_S_HW3 = TeslaPlatformConfig(
-    [CarDocs("Tesla Model S HW3", "All")],
+    [CarDocs("Tesla Model S (with HW3) 2020-23", "All", car_parts=CarParts.common([CarHarness.tesla_model_sx_hw3]))],
     CarSpecs(mass=2100., wheelbase=2.959, steerRatio=15.0),
     {
       Bus.chassis: 'tesla_can',
@@ -144,6 +144,7 @@ class CANBUS:
   powertrain = 4
   chassis = 5
   autopilot_powertrain = 6
+
 
 GEAR_MAP = {
   "DI_GEAR_INVALID": CarState.GearShifter.unknown,
@@ -190,6 +191,7 @@ class TeslaSafetyFlags(IntFlag):
 class TeslaFlags(IntFlag):
   LONG_CONTROL = 1
   NO_SDM1 = 2
+
 
 DBC = CAR.create_dbc_map()
 

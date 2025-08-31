@@ -27,5 +27,3 @@ def create_lka_steering(packer, counter, apply_torque, active):
 
   values["LKAReqToqPVHSC2"] = calc_checksum(values)
   return packer.make_can_msg("FVCM_HSC2_FrP03", 0, values)
-
-
