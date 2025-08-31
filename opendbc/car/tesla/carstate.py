@@ -211,10 +211,8 @@ class CarState(CarStateBase):
     ret.rightBlinker = cp_chassis.vl["GTW_carState"]["BC_indicatorRStatus"] == 1
 
     # Seatbelt
-    if self.CP.carFingerprint == CAR.TESLA_MODEL_X_HW1:
+    if self.CP.flags & TeslaFlags.NO_SDM1:
       ret.seatbeltUnlatched = cp_chassis.vl["RCM_status"]["RCM_buckleDriverStatus"] != 1
-    elif self.CP.flags & TeslaFlags.NO_SDM1:
-      ret.seatbeltUnlatched = cp_chassis.vl["DriverSeat"]["buckleStatus"] != 1
     else:
       ret.seatbeltUnlatched = cp_chassis.vl["SDM1"]["SDM_bcklDrivStatus"] != 1
 
