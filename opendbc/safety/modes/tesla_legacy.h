@@ -67,7 +67,7 @@ static void tesla_legacy_rx_hook(const CANPacket_t *msg) {
 
   if (msg->bus == 2U) {
     // DAS_control
-    if ((tesla_external_panda) && (msg->addr == das_control_msg)) {
+    if ((tesla_external_panda || tesla_hw1) && (msg->addr == das_control_msg)) {
       // "AEB_ACTIVE"
       tesla_legacy_aeb = (msg->data[2] & 0x03U) == 1U;
     }
@@ -175,17 +175,17 @@ static bool tesla_legacy_fwd_hook(int bus_num, int addr) {
 
   if (bus_num == 2) {
     // APS_eacMonitor
-    if ((!tesla_external_panda) && (addr == 0x27dU)) {
+    if (!tesla_external_panda && (addr == 0x27dU)) {
       block_msg = true;
     }
 
     // DAS_steeringControl
-    if ((!tesla_external_panda) && (addr == 0x488U) && (!tesla_legacy_stock_lkas)) {
+    if (!tesla_external_panda && (addr == 0x488U) && !tesla_legacy_stock_lkas) {
       block_msg = true;
     }
 
     // DAS_control
-    if (((tesla_external_panda) || (tesla_hw1)) && (addr == das_control_msg) && (!tesla_legacy_aeb)) {
+    if ((tesla_external_panda || tesla_hw1) && (addr == das_control_msg) && !tesla_legacy_aeb) {
       block_msg = true;
     }
   }
