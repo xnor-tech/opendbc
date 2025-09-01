@@ -3,7 +3,7 @@ from opendbc.can import CANDefine, CANParser
 from opendbc.car import Bus, structs
 from opendbc.car.common.conversions import Conversions as CV
 from opendbc.car.interfaces import CarStateBase
-from opendbc.car.tesla.values import DBC, CANBUS, GEAR_MAP, STEER_THRESHOLD, CAR, TeslaFlags, LEGACY_CARS
+from opendbc.car.tesla.values import DBC, CANBUS, GEAR_MAP, STEER_THRESHOLD, CAR, TeslaLegacyParams, LEGACY_CARS
 
 ButtonType = structs.CarState.ButtonEvent.Type
 
@@ -51,7 +51,7 @@ class CarState(CarStateBase):
 
   def update(self, can_parsers) -> structs.CarState:
     if self.CP.carFingerprint in LEGACY_CARS:
-      return self.update_sx(can_parsers)
+      return self.update_legacy(can_parsers)
 
     cp_party = can_parsers[Bus.party]
     cp_ap_party = can_parsers[Bus.ap_party]
@@ -141,7 +141,7 @@ class CarState(CarStateBase):
 
     return ret
 
-  def update_sx(self, can_parsers) -> structs.CarState:
+  def update_legacy(self, can_parsers) -> structs.CarState:
     cp_party = can_parsers[Bus.party]
     cp_ap_party = can_parsers[Bus.ap_party]
     cp_pt = can_parsers[Bus.pt]
@@ -189,7 +189,7 @@ class CarState(CarStateBase):
     cruise_enabled = cruise_state in ("ENABLED", "STANDSTILL", "OVERRIDE", "PRE_FAULT", "PRE_CANCEL")
 
     # Match panda safety cruise engaged logic
-    ret.cruiseState.enabled = cruise_enabled and not self.autopark
+    ret.cruiseState.enabled = cruise_enabled
     if speed_units == "KPH":
       ret.cruiseState.speed = max(cp_chassis.vl["DI_state"]["DI_digitalSpeed"] * CV.KPH_TO_MS, 1e-3)
     elif speed_units == "MPH":
@@ -211,7 +211,7 @@ class CarState(CarStateBase):
     ret.rightBlinker = cp_chassis.vl["GTW_carState"]["BC_indicatorRStatus"] == 1
 
     # Seatbelt
-    if self.CP.flags & TeslaFlags.NO_SDM1:
+    if self.CP.flags & TeslaLegacyParams.NO_SDM1:
       ret.seatbeltUnlatched = cp_chassis.vl["RCM_status"]["RCM_buckleDriverStatus"] != 1
     else:
       ret.seatbeltUnlatched = cp_chassis.vl["SDM1"]["SDM_bcklDrivStatus"] != 1

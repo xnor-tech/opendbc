@@ -2,7 +2,7 @@ from opendbc.car import get_safety_config, structs
 from opendbc.car.interfaces import CarInterfaceBase
 from opendbc.car.tesla.carcontroller import CarController
 from opendbc.car.tesla.carstate import CarState
-from opendbc.car.tesla.values import TeslaSafetyFlags, CAR, TeslaFlags, LEGACY_CARS
+from opendbc.car.tesla.values import TeslaSafetyFlags, CAR, TeslaLegacyParams, LEGACY_CARS
 from opendbc.car.tesla.radar_interface import RadarInterface
 
 
@@ -44,28 +44,22 @@ class CarInterface(CarInterfaceBase):
   def _get_params_sx(ret: structs.CarParams, candidate, fingerprint, car_fw, alpha_long, is_release, docs) -> structs.CarParams:
     ret.brand = "tesla"
 
-    TESLA_LEGACY_SAFETY_MODEL = 99
-    PARAM_EXTERNAL_PANDA = 2
-    PARAM_HW1 = 4
-    PARAM_HW2 = 8
-    PARAM_HW3 = 16
-
     if not any(0x201 in f for f in fingerprint.values()):
-      ret.flags |= TeslaFlags.NO_SDM1.value
+      ret.flags |= TeslaLegacyParams.NO_SDM1.value
 
     if candidate in (CAR.TESLA_MODEL_S_HW1, CAR.TESLA_MODEL_X_HW1, ):
       ret.safetyConfigs = [
-        get_safety_config(TESLA_LEGACY_SAFETY_MODEL, PARAM_HW1),
+        get_safety_config(structs.CarParams.SafetyModel.teslaLegacy, int(TeslaSafetyFlags.PARAM_HW1)),
       ]
     elif candidate in (CAR.TESLA_MODEL_S_HW2,):
       ret.safetyConfigs = [
-        get_safety_config(TESLA_LEGACY_SAFETY_MODEL, PARAM_HW2),
-        get_safety_config(TESLA_LEGACY_SAFETY_MODEL, PARAM_HW2 | PARAM_EXTERNAL_PANDA),
+        get_safety_config(structs.CarParams.SafetyModel.teslaLegacy, int(TeslaSafetyFlags.PARAM_HW2)),
+        get_safety_config(structs.CarParams.SafetyModel.teslaLegacy, int(TeslaSafetyFlags.PARAM_HW2 | TeslaSafetyFlags.PARAM_EXTERNAL_PANDA)),
       ]
     elif candidate in (CAR.TESLA_MODEL_S_HW3,):
       ret.safetyConfigs = [
-        get_safety_config(TESLA_LEGACY_SAFETY_MODEL, PARAM_HW3),
-        get_safety_config(TESLA_LEGACY_SAFETY_MODEL, PARAM_HW3 | PARAM_EXTERNAL_PANDA),
+        get_safety_config(structs.CarParams.SafetyModel.teslaLegacy, int(TeslaSafetyFlags.PARAM_HW3)),
+        get_safety_config(structs.CarParams.SafetyModel.teslaLegacy, int(TeslaSafetyFlags.PARAM_HW3 | TeslaSafetyFlags.PARAM_EXTERNAL_PANDA)),
       ]
 
     ret.steerLimitTimer = 0.4

@@ -184,14 +184,20 @@ class CarControllerParams:
   JERK_LIMIT_MIN = -4.9  # m/s^3, ACC faults at 5.0
 
 
+class TeslaLegacyParams(IntFlag):
+  NO_SDM1 = 1
+
+
 class TeslaSafetyFlags(IntFlag):
   LONG_CONTROL = 1
+  PARAM_EXTERNAL_PANDA = 2
+  PARAM_HW1 = 4
+  PARAM_HW2 = 8
+  PARAM_HW3 = 16
 
 
 class TeslaFlags(IntFlag):
   LONG_CONTROL = 1
-  NO_SDM1 = 2
-
 
 DBC = CAR.create_dbc_map()
 
