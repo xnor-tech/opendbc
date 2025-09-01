@@ -13,10 +13,10 @@ class TestMGSafety(common.PandaCarSafetyTest, common.DriverTorqueSteeringSafetyT
   RELAY_MALFUNCTION_ADDRS = {0: (0x1fd,)}
   FWD_BLACKLISTED_ADDRS = {2: [0x1fd,]}
 
-  MAX_RATE_UP = 4
-  MAX_RATE_DOWN = 10
+  MAX_RATE_UP = 10
+  MAX_RATE_DOWN = 15
   MAX_TORQUE_LOOKUP = [0], [300]
-  MAX_RT_DELTA = 75
+  MAX_RT_DELTA = 125
 
   DRIVER_TORQUE_ALLOWANCE = 100
   DRIVER_TORQUE_FACTOR = 2
