@@ -70,7 +70,7 @@ class TestTeslaHW1Safety(common.PandaCarSafetyTest, common.AngleSteeringSafetyTe
                                 self.define.dv["DAS_steeringControl"]["DAS_steeringControlType"].items()}
 
     self.safety = libsafety_py.libsafety
-    self.safety.set_safety_hooks(CarParams.SafetyModel.teslaLegacy, int(TeslaSafetyFlags.PARAM_HW1))
+    self.safety.set_safety_hooks(CarParams.SafetyModel.teslaLegacy, int(TeslaSafetyFlags.FLAG_HW1))
     self.safety.init_tests()
 
   def _angle_cmd_msg(self, angle: float, state: bool | int, increment_timer: bool = True, bus: int = 0):
@@ -182,8 +182,20 @@ class TestTeslaHW1Safety(common.PandaCarSafetyTest, common.AngleSteeringSafetyTe
       self.assertEqual(should_tx, self._tx(self._angle_cmd_msg(0, state=steer_control_type)))
 
   def test_stock_lkas_passthrough(self):
-    # HW1 doesn't have stock LKAS passthrough in the C code - skip this test
-    pass
+    # TODO: make these generic passthrough tests
+    no_lkas_msg = self._angle_cmd_msg(0, state=False)
+    no_lkas_msg_cam = self._angle_cmd_msg(0, state=True, bus=2)
+    lkas_msg_cam = self._angle_cmd_msg(0, state=self.steer_control_types['LANE_KEEP_ASSIST'], bus=2)
+
+    # stock system sends no LKAS -> no forwarding, and OP is allowed to TX
+    self.assertEqual(1, self._rx(no_lkas_msg_cam))
+    self.assertEqual(-1, self.safety.safety_fwd_hook(2, no_lkas_msg_cam.addr))
+    self.assertTrue(self._tx(no_lkas_msg))
+
+    # stock system sends LKAS -> forwarding, and OP is not allowed to TX
+    self.assertEqual(1, self._rx(lkas_msg_cam))
+    self.assertEqual(0, self.safety.safety_fwd_hook(2, lkas_msg_cam.addr))
+    self.assertFalse(self._tx(no_lkas_msg))
 
   def test_no_aeb(self):
     # Test that AEB events are blocked

@@ -190,10 +190,10 @@ class TeslaLegacyParams(IntFlag):
 
 class TeslaSafetyFlags(IntFlag):
   LONG_CONTROL = 1
-  PARAM_EXTERNAL_PANDA = 2
-  PARAM_HW1 = 4
-  PARAM_HW2 = 8
-  PARAM_HW3 = 16
+  FLAG_EXTERNAL_PANDA = 2
+  FLAG_HW1 = 4
+  FLAG_HW2 = 8
+  FLAG_HW3 = 16
 
 
 class TeslaFlags(IntFlag):

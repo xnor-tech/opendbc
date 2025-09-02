@@ -11,7 +11,7 @@ static int chassis_bus = 0U;
 static int das_control_msg = 0x2bfU;
 static int di_torque1_msg = 0x106U;
 
-static bool tesla_legacy_aeb = false;
+static bool tesla_legacy_stock_aeb = false;
 
 // Only rising edges while controls are not allowed are considered for these systems:
 // TODO: Only LKAS (non-emergency) is currently supported since we've only seen it
@@ -42,7 +42,7 @@ static void tesla_legacy_rx_hook(const CANPacket_t *msg) {
   }
 
   // Gas pressed
-  if (((tesla_external_panda) || (tesla_hw1)) && (msg->bus == 0U) && (msg->addr == di_torque1_msg)) {
+  if ((tesla_external_panda || tesla_hw1) && (msg->bus == 0U) && (msg->addr == di_torque1_msg)) {
     gas_pressed = msg->data[6] != 0U;
   }
 
@@ -67,13 +67,13 @@ static void tesla_legacy_rx_hook(const CANPacket_t *msg) {
 
   if (msg->bus == 2U) {
     // DAS_control
-    if ((tesla_external_panda || tesla_hw1) && (msg->addr == das_control_msg)) {
+    if ((tesla_external_panda || tesla_hw1) && msg->addr == das_control_msg) {
       // "AEB_ACTIVE"
-      tesla_legacy_aeb = (msg->data[2] & 0x03U) == 1U;
+      tesla_legacy_stock_aeb = (msg->data[2] & 0x03U) == 1U;
     }
 
     // DAS_steeringControl
-    if ((!tesla_external_panda) && (msg->addr == 0x488U)) {
+    if (!tesla_external_panda && msg->addr == 0x488U) {
       int steering_control_type = msg->data[2] >> 6;
       bool tesla_legacy_stock_lkas_now = steering_control_type == 2;  // "LANE_KEEP_ASSIST"
 
@@ -146,7 +146,7 @@ static bool tesla_legacy_tx_hook(const CANPacket_t *msg) {
     }
 
     // Don't send long/cancel messages when the stock AEB system is active
-    if (tesla_legacy_aeb) {
+    if (tesla_legacy_stock_aeb) {
       violation = true;
     }
 
@@ -185,7 +185,7 @@ static bool tesla_legacy_fwd_hook(int bus_num, int addr) {
     }
 
     // DAS_control
-    if ((tesla_external_panda || tesla_hw1) && (addr == das_control_msg) && !tesla_legacy_aeb) {
+    if ((tesla_external_panda || tesla_hw1) && (addr == das_control_msg) && !tesla_legacy_stock_aeb) {
       block_msg = true;
     }
   }
@@ -199,16 +199,21 @@ static safety_config tesla_legacy_init(uint16_t param) {
   const int TESLA_FLAG_HW2 = 8;
   const int TESLA_FLAG_HW3 = 16;
 
-  // External panda is used for long control on HW2 and HW3 Model S
+  // Extract flags
   tesla_external_panda = GET_FLAG(param, TESLA_FLAG_EXTERNAL_PANDA);
   tesla_hw1 = GET_FLAG(param, TESLA_FLAG_HW1);
   tesla_hw2 = GET_FLAG(param, TESLA_FLAG_HW2);
   tesla_hw3 = GET_FLAG(param, TESLA_FLAG_HW3);
 
-  tesla_legacy_aeb = false;
+  // Initialize state variables
+  tesla_legacy_stock_aeb = false;
   tesla_legacy_stock_lkas = false;
   tesla_legacy_stock_lkas_prev = false;
 
+  // Set DAS control message address
+  das_control_msg = tesla_external_panda ? 0x2bfU : 0x2b9U;
+
+  // Define message arrays (keeping them as is)
   static const CanMsg TESLA_TX_LEGACY_MSGS[] = {
     {0x488, 0, 4, .check_relay = true, .disable_static_blocking = true},  // DAS_steeringControl
     {0x27D, 0, 3, .check_relay = true, .disable_static_blocking = true},  // APS_eacMonitor
@@ -223,47 +228,57 @@ static safety_config tesla_legacy_init(uint16_t param) {
     {0x2b9, 0, 8, .check_relay = true, .disable_static_blocking = true},  // DAS_control
   };
 
-  safety_config ret;
+  // Define RX check arrays (keeping them as is)
+  static RxCheck tesla_legacy_pt_rx_checks[] = {
+    {.msg = {{0x106, 0, 8, 100U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},  // DI_torque1
+    {.msg = {{0x1f8, 0, 8, 50U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // BrakeMessage
+    {.msg = {{0x2bf, 2, 8, 25U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // DAS_control
+    {.msg = {{0x256, 0, 8, 10U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // DI_state
+  };
+
+  static RxCheck tesla_legacy_hw1_rx_checks[] = {
+    {.msg = {{0x108, 0, 8, 100U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},  // DI_torque1
+    {.msg = {{0x2b9, 2, 8, 25U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // DAS_control
+    {.msg = {{0x370, 0, 8, 25U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // EPAS_sysStatus (25hz)
+    {.msg = {{0x155, 0, 8, 50U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // ESP_private1
+    {.msg = {{0x20a, 0, 8, 50U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // BrakeMessage
+    {.msg = {{0x368, 0, 8, 10U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // DI_state
+    {.msg = {{0x488, 2, 4, 50U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // DAS_steeringControl
+  };
+
+  static RxCheck tesla_legacy_hw2_rx_checks[] = {
+    {.msg = {{0x370, 0, 8, 25U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // EPAS_sysStatus (25hz)
+    {.msg = {{0x155, 0, 8, 50U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // ESP_private1
+    {.msg = {{0x20a, 0, 8, 50U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // BrakeMessage
+    {.msg = {{0x368, 0, 8, 10U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // DI_state
+    {.msg = {{0x488, 2, 4, 50U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // DAS_steeringControl
+  };
+
+  static RxCheck tesla_legacy_hw3_rx_checks[] = {
+    {.msg = {{0x370, 0, 8, 100U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // EPAS_sysStatus (100hz)
+    {.msg = {{0x155, 1, 8, 50U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // ESP_private1
+    {.msg = {{0x20a, 1, 8, 50U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // BrakeMessage
+    {.msg = {{0x368, 1, 8, 10U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // DI_state
+    {.msg = {{0x488, 2, 4, 50U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // DAS_steeringControl
+  };
+
+  // Determine configuration based on hardware type
   if (tesla_external_panda && (tesla_hw3 || tesla_hw2)) {
-    static RxCheck tesla_legacy_pt_rx_checks[] = {
-      {.msg = {{0x106, 0, 8, 100U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},  // DI_torque1
-      {.msg = {{0x1f8, 0, 8, 50U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // BrakeMessage
-      {.msg = {{0x2bf, 2, 8, 25U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // DAS_control
-      {.msg = {{0x256, 0, 8, 10U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // DI_state
-    };
-    ret = BUILD_SAFETY_CFG(tesla_legacy_pt_rx_checks, TESLA_LEGACY_PT_MSGS);
-  } else if (tesla_hw3){
+    return BUILD_SAFETY_CFG(tesla_legacy_pt_rx_checks, TESLA_LEGACY_PT_MSGS);
+  }
+
+  if (tesla_hw3) {
     chassis_bus = 1U;
-    static RxCheck tesla_legacy_hw3_rx_checks[] = {
-      {.msg = {{0x370, 0, 8, 100U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // EPAS_sysStatus (100hz)
-      {.msg = {{0x155, 1, 8, 50U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // ESP_private1
-      {.msg = {{0x20a, 1, 8, 50U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // BrakeMessage
-      {.msg = {{0x368, 1, 8, 10U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // DI_state
-    };
-    ret = BUILD_SAFETY_CFG(tesla_legacy_hw3_rx_checks, TESLA_TX_LEGACY_MSGS);
-  } else if (tesla_hw1){
+    return BUILD_SAFETY_CFG(tesla_legacy_hw3_rx_checks, TESLA_TX_LEGACY_MSGS);
+  }
+
+  if (tesla_hw1) {
     di_torque1_msg = 0x108U;
-    das_control_msg = 0x2b9U;
-    static RxCheck tesla_legacy_hw1_rx_checks[] = {
-      {.msg = {{0x108, 0, 8, 100U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},  // DI_torque1
-      {.msg = {{0x2b9, 2, 8, 25U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // DAS_control
-      {.msg = {{0x370, 0, 8, 25U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // EPAS_sysStatus (25hz)
-      {.msg = {{0x155, 0, 8, 50U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // ESP_private1
-      {.msg = {{0x20a, 0, 8, 50U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // BrakeMessage
-      {.msg = {{0x368, 0, 8, 10U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // DI_state
-    };
-    ret = BUILD_SAFETY_CFG(tesla_legacy_hw1_rx_checks, TESLA_TX_LEGACY_HW1_MSGS);
+    return BUILD_SAFETY_CFG(tesla_legacy_hw1_rx_checks, TESLA_TX_LEGACY_HW1_MSGS);
   }
-  else {
-     static RxCheck tesla_legacy_hw2_rx_checks[] = {
-      {.msg = {{0x370, 0, 8, 25U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // EPAS_sysStatus (25hz)
-      {.msg = {{0x155, 0, 8, 50U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // ESP_private1
-      {.msg = {{0x20a, 0, 8, 50U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // BrakeMessage
-      {.msg = {{0x368, 0, 8, 10U, .ignore_quality_flag = true, .ignore_checksum = true, .ignore_counter = true}, { 0 }, { 0 }}},   // DI_state
-    };
-    ret = BUILD_SAFETY_CFG(tesla_legacy_hw2_rx_checks, TESLA_TX_LEGACY_MSGS);
-  }
-  return ret;
+
+  // Default case: HW2
+  return BUILD_SAFETY_CFG(tesla_legacy_hw2_rx_checks, TESLA_TX_LEGACY_MSGS);
 }
 
 const safety_hooks tesla_legacy_hooks = {
