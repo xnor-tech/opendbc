@@ -36,8 +36,8 @@ static void tesla_legacy_rx_hook(const CANPacket_t *msg) {
 
   // Vehicle speed (ESP_B: ESP_vehicleSpeed)
   if ((!tesla_external_panda) && (msg->bus == chassis_bus) && (msg->addr == 0x155U)) {
-    // Vehicle speed: (0.05625 * val) * KPH_TO_MPS
-    float speed = ((msg->data[6]| (msg->data[5] << 8)) * 0.00999999978) * 0.27778;
+    // Vehicle speed: (0.00999999978 * val) * KPH_TO_MPS
+    float speed = ((msg->data[6] | (msg->data[5] << 8)) * 0.00999999978) * KPH_TO_MS;
     UPDATE_VEHICLE_SPEED(speed);
   }
 
@@ -99,9 +99,9 @@ static bool tesla_legacy_tx_hook(const CANPacket_t *msg) {
 
   // NOTE: based off TESLA_MODEL_S_HW3 to match openpilot
   const AngleSteeringParams TESLA_LEGACY_STEERING_PARAMS = {
-    .slip_factor = -0.000566840830029194,  // calc_slip_factor(VM)
+    .slip_factor = -0.0005666493436310427,  // calc_slip_factor(VM)
     .steer_ratio = 15.,
-    .wheelbase = 2.95,
+    .wheelbase = 2.96,
   };
 
   const LongitudinalLimits TESLA_LONG_LIMITS = {
@@ -175,7 +175,7 @@ static bool tesla_legacy_fwd_hook(int bus_num, int addr) {
 
   if (bus_num == 2) {
     // APS_eacMonitor
-    if (!tesla_external_panda && (addr == 0x27dU)) {
+    if (!tesla_external_panda && !tesla_hw1 && (addr == 0x27dU)) {
       block_msg = true;
     }
 
@@ -199,6 +199,7 @@ static safety_config tesla_legacy_init(uint16_t param) {
   const int TESLA_FLAG_HW2 = 8;
   const int TESLA_FLAG_HW3 = 16;
 
+  // External panda is used for long control on HW2 and HW3 Model S
   tesla_external_panda = GET_FLAG(param, TESLA_FLAG_EXTERNAL_PANDA);
   tesla_hw1 = GET_FLAG(param, TESLA_FLAG_HW1);
   tesla_hw2 = GET_FLAG(param, TESLA_FLAG_HW2);

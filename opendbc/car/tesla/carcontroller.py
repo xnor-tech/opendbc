@@ -79,3 +79,9 @@ class CarController(CarControllerBase):
 
     self.frame += 1
     return new_actuators, can_sends
+
+if __name__ == '__main__':
+  from opendbc.car.tesla.interface import CarInterface
+  from opendbc.car.vehicle_model import calc_slip_factor
+  VM = VehicleModel(CarInterface.get_non_essential_params("TESLA_MODEL_S_HW3"))
+  print(calc_slip_factor(VM))
