@@ -36,8 +36,8 @@ static void tesla_legacy_rx_hook(const CANPacket_t *msg) {
 
   // Vehicle speed (ESP_B: ESP_vehicleSpeed)
   if ((!tesla_external_panda) && (msg->bus == chassis_bus) && (msg->addr == 0x155U)) {
-    // Vehicle speed: (0.00999999978 * val) * KPH_TO_MPS
-    float speed = ((msg->data[6] | (msg->data[5] << 8)) * 0.00999999978) * KPH_TO_MS;
+    // Vehicle speed: (0.01 * val) * KPH_TO_MS
+    float speed = ((msg->data[6] | (msg->data[5] << 8)) * 0.01) * KPH_TO_MS;
     UPDATE_VEHICLE_SPEED(speed);
   }
 

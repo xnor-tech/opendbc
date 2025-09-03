@@ -79,12 +79,10 @@ class TeslaLegacyLateralBase(common.PandaCarSafetyTest, common.AngleSteeringSafe
     return self.packer.make_can_msg_panda("EPAS_sysStatus", 0, values)
 
   def _user_brake_msg(self, brake):
-    # Legacy uses BrakeMessage with driverBrakeStatus signal
     values = {"driverBrakeStatus": 2 if brake else 1}
     return self.packer_chassis.make_can_msg_panda("BrakeMessage", self.chassis_bus, values)
 
   def _speed_msg(self, speed):
-    # Legacy uses ESP_B message with ESP_vehicleSpeed signal
     values = {"ESP_vehicleSpeed": speed * 3.6}  # Convert m/s to km/h
     return self.packer_chassis.make_can_msg_panda("ESP_B", self.chassis_bus, values)
 
@@ -178,7 +176,7 @@ class TeslaLegacyLateralBase(common.PandaCarSafetyTest, common.AngleSteeringSafe
   def test_lateral_accel_limit(self):
     for speed in np.linspace(0, 40, 50):  # Reduced iterations for legacy tests
       speed = max(speed, 1)
-      speed = round_speed(away_round(speed / 0.00999999978 * 3.6) * 0.00999999978 / 3.6)
+      speed = round_speed(away_round(speed / 0.01 * 3.6) * 0.01 / 3.6)
       for sign in (-1, 1):
         self.safety.set_controls_allowed(True)
         self._reset_speed_measurement(speed + 1)
@@ -202,7 +200,7 @@ class TeslaLegacyLateralBase(common.PandaCarSafetyTest, common.AngleSteeringSafe
   def test_lateral_jerk_limit(self):
     for speed in np.linspace(0, 40, 50):  # Reduced iterations for legacy tests
       speed = max(speed, 1)
-      speed = round_speed(away_round(speed / 0.00999999978 * 3.6) * 0.00999999978 / 3.6)
+      speed = round_speed(away_round(speed / 0.01 * 3.6) * 0.01 / 3.6)
       for sign in (-1, 1):
         self.safety.set_controls_allowed(True)
         self._reset_speed_measurement(speed + 1)
@@ -251,9 +249,6 @@ class TeslaLegacyLongitudinalBase(common.PandaCarSafetyTest, common.Longitudinal
   def setUp(self):
     # Tesla Legacy uses tesla_can DBC
     self.packer = CANPackerPanda("tesla_powertrain")
-
-    self.define = CANDefine("tesla_powertrain")
-    self.acc_states = {d: v for v, d in self.define.dv["DAS_control"]["DAS_accState"].items()}
 
   def _vehicle_moving_msg(self, speed: float):
     values = {"DI_cruiseState": 3 if speed <= self.STANDSTILL_THRESHOLD else 2, "DI_speedUnits": 1}  # 1 = KPH
