@@ -326,6 +326,7 @@ routes = [
   CarTestRoute("2c912ca5de3b1ee9/0000025d--6eb6bcbca4", TESLA.TESLA_MODEL_Y, segment=4),
   CarTestRoute("bdda168c0c35fad7/00000001--5c5a36ec06", TESLA.TESLA_MODEL_X), # openpilot longitudinal
   CarTestRoute("9227f2c54e175788/00000000--650ad7d3e0", TESLA.TESLA_MODEL_S_HW1),
+  CarTestRoute("66c1699b7697267d/00000176--4b6b80db68", TESLA.TESLA_MODEL_S_HW3),
 
   CarTestRoute("5d61e2f6e1f247f3/00000054--d3dfb01b34", MG.MG_5_EV),
 
