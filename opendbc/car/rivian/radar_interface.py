@@ -59,7 +59,7 @@ class RadarInterface(RadarInterfaceBase):
           self.track_id += 1
         else:
           # MODE 1=SRR 2=LRR 3=SRR_and_LRR
-          valid = msg['MODE'] in (2, 3)
+          valid = msg['MODE'] == 3
 
         self.pts[addr].measured = msg['STATE'] in (2, 3)
         azimuth = math.radians(msg['AZIMUTH'])
