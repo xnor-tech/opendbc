@@ -209,6 +209,8 @@ static safety_config tesla_legacy_init(uint16_t param) {
   tesla_legacy_stock_aeb = false;
   tesla_legacy_stock_lkas = false;
   tesla_legacy_stock_lkas_prev = false;
+  chassis_bus = 0U;
+  di_torque1_msg = 0x106U;
 
   // Set DAS control message address
   das_control_msg = tesla_external_panda ? 0x2bfU : 0x2b9U;

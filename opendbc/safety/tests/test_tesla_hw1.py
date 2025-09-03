@@ -101,7 +101,6 @@ class TestTeslaHW1Safety(common.PandaCarSafetyTest, common.AngleSteeringSafetyTe
     return self.packer.make_can_msg_panda("ESP_B", 0, values)
 
   def _vehicle_moving_msg(self, speed: float):
-    # HW1 uses DI_state message
     values = {"DI_cruiseState": 3 if speed <= self.STANDSTILL_THRESHOLD else 2}
     return self.packer.make_can_msg_panda("DI_state", 0, values)
 
@@ -111,7 +110,6 @@ class TestTeslaHW1Safety(common.PandaCarSafetyTest, common.AngleSteeringSafetyTe
     return self.packer.make_can_msg_panda("DI_torque1", 0, values)
 
   def _pcm_status_msg(self, enable):
-    # HW1 uses DI_state message
     values = {"DI_cruiseState": 2 if enable else 0}
     return self.packer.make_can_msg_panda("DI_state", 0, values)
 
