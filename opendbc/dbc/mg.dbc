@@ -120,7 +120,7 @@ BO_ 492 EPS_HSC2_FrP03: 8 EPS
  SG_ ChLKARespToqHSC2 : 2|11@0+ (0.01,-10.24) [-10.24|10.23] "Nm"  FVCM
  SG_ ChLKARespToqPVHSC2 : 22|15@0+ (1,0) [0|32767] ""  FVCM
  SG_ ChLKARespToqVHSC2 : 3|1@0+ (1,0) [0|1] ""  FVCM
- SG_ DrvrStrgDlvrdToqHSC2 : 34|11@0+ (1,-1024) [-10.24|10.23] "Nm"  FVCM
+ SG_ DrvrStrgDlvrdToqHSC2 : 34|11@0+ (0.01,-10.24) [-10.24|10.23] "Nm"  FVCM
  SG_ DrvrStrgDlvrdToqVHSC2 : 55|1@0+ (1,0) [0|1] ""  FVCM
 
 BO_ 509 FVCM_HSC2_FrP03: 8 FVCM
