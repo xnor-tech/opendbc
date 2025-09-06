@@ -52,23 +52,25 @@ class RadarInterface(RadarInterfaceBase):
 
       # STATE 1=New 2=New_updated 3=Updated 4=Coasting 7=New_coasting
       valid = msg['STATE'] in (1, 2, 3, 4, 7)
-      
-      if msg['STATE'] in (1, 2, 7):
+      if valid:
+        if addr not in self.pts or msg['STATE'] in (1, 2, 7):
           self.pts[addr] = structs.RadarData.RadarPoint()
           self.pts[addr].trackId = self.track_id
           self.track_id += 1
 
-      if valid and addr in self.pts:
-        # MODE 1=SRR 2=LRR 3=SRR_and_LRR
-        long_range = msg['MODE'] == 2
-        self.pts[addr].measured = msg['STATE'] in (2, 3) and long_range
+        self.pts[addr].measured = msg['STATE'] in (2, 3)
         azimuth = math.radians(msg['AZIMUTH'])
         self.pts[addr].dRel = math.cos(azimuth) * msg['LONG_DIST']
         self.pts[addr].yRel = 0.5 * -math.sin(azimuth) * msg['LONG_DIST']
         self.pts[addr].vRel = msg['REL_SPEED']
         self.pts[addr].aRel = float('nan')
         self.pts[addr].yvRel = float('nan')
-      else:
+
+        # Rivian radar picks up random things like guardrails etc. which sometimes cause phantom braking
+        # Filter this out and relying on openpilot vision for close distances
+        valid = self.pts[addr].dRel > 6.5
+
+      if not valid:
         if addr in self.pts:
           del self.pts[addr]
 
