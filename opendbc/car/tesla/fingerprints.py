@@ -58,6 +58,7 @@ FW_VERSIONS = {
     (Ecu.eps, 0x730, None): [
       b'TeM3_SP_XP002p2_0.0.0 (23),SPP003.6.0',
       b'TeM3_SP_XP002p2_0.0.0 (23),SPR003.6.0',
+      b'TeM3_SP_XP002p2_0.0.0 (36),SPP003.10.0',
     ],
   },
   CAR.TESLA_MODEL_S_HW1: {

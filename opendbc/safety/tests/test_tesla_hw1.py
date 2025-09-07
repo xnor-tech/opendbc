@@ -70,7 +70,7 @@ class TestTeslaHW1Safety(common.PandaCarSafetyTest, common.AngleSteeringSafetyTe
                                 self.define.dv["DAS_steeringControl"]["DAS_steeringControlType"].items()}
 
     self.safety = libsafety_py.libsafety
-    self.safety.set_safety_hooks(CarParams.SafetyModel.teslaLegacy, int(TeslaSafetyFlags.PARAM_HW1))
+    self.safety.set_safety_hooks(CarParams.SafetyModel.teslaLegacy, int(TeslaSafetyFlags.FLAG_HW1))
     self.safety.init_tests()
 
   def _angle_cmd_msg(self, angle: float, state: bool | int, increment_timer: bool = True, bus: int = 0):
@@ -101,7 +101,6 @@ class TestTeslaHW1Safety(common.PandaCarSafetyTest, common.AngleSteeringSafetyTe
     return self.packer.make_can_msg_panda("ESP_B", 0, values)
 
   def _vehicle_moving_msg(self, speed: float):
-    # HW1 uses DI_state message
     values = {"DI_cruiseState": 3 if speed <= self.STANDSTILL_THRESHOLD else 2}
     return self.packer.make_can_msg_panda("DI_state", 0, values)
 
@@ -111,7 +110,6 @@ class TestTeslaHW1Safety(common.PandaCarSafetyTest, common.AngleSteeringSafetyTe
     return self.packer.make_can_msg_panda("DI_torque1", 0, values)
 
   def _pcm_status_msg(self, enable):
-    # HW1 uses DI_state message
     values = {"DI_cruiseState": 2 if enable else 0}
     return self.packer.make_can_msg_panda("DI_state", 0, values)
 
@@ -182,8 +180,20 @@ class TestTeslaHW1Safety(common.PandaCarSafetyTest, common.AngleSteeringSafetyTe
       self.assertEqual(should_tx, self._tx(self._angle_cmd_msg(0, state=steer_control_type)))
 
   def test_stock_lkas_passthrough(self):
-    # HW1 doesn't have stock LKAS passthrough in the C code - skip this test
-    pass
+    # TODO: make these generic passthrough tests
+    no_lkas_msg = self._angle_cmd_msg(0, state=False)
+    no_lkas_msg_cam = self._angle_cmd_msg(0, state=True, bus=2)
+    lkas_msg_cam = self._angle_cmd_msg(0, state=self.steer_control_types['LANE_KEEP_ASSIST'], bus=2)
+
+    # stock system sends no LKAS -> no forwarding, and OP is allowed to TX
+    self.assertEqual(1, self._rx(no_lkas_msg_cam))
+    self.assertEqual(-1, self.safety.safety_fwd_hook(2, no_lkas_msg_cam.addr))
+    self.assertTrue(self._tx(no_lkas_msg))
+
+    # stock system sends LKAS -> forwarding, and OP is not allowed to TX
+    self.assertEqual(1, self._rx(lkas_msg_cam))
+    self.assertEqual(0, self.safety.safety_fwd_hook(2, lkas_msg_cam.addr))
+    self.assertFalse(self._tx(no_lkas_msg))
 
   def test_no_aeb(self):
     # Test that AEB events are blocked
@@ -235,8 +245,7 @@ class TestTeslaHW1Safety(common.PandaCarSafetyTest, common.AngleSteeringSafetyTe
   def test_lateral_accel_limit(self):
     for speed in np.linspace(0, 40, 100):
       speed = max(speed, 1)
-      # match ESP_vehicleSpeed rounding on CAN
-      speed = round_speed(away_round(speed / 0.00999999978 * 3.6) * 0.00999999978 / 3.6)
+      speed = round_speed(away_round(speed / 0.01 * 3.6) * 0.01 / 3.6)
       for sign in (-1, 1):
         self.safety.set_controls_allowed(True)
         self._reset_speed_measurement(speed + 1)  # safety fudges the speed
@@ -263,8 +272,7 @@ class TestTeslaHW1Safety(common.PandaCarSafetyTest, common.AngleSteeringSafetyTe
   def test_lateral_jerk_limit(self):
     for speed in np.linspace(0, 40, 100):
       speed = max(speed, 1)
-      # match DI_vehicleSpeed rounding on CAN
-      speed = round_speed(away_round(speed / 0.00999999978 * 3.6) * 0.00999999978 / 3.6)
+      speed = round_speed(away_round(speed / 0.01 * 3.6) * 0.01 / 3.6)
       for sign in (-1, 1):  # (-1, 1):
         self.safety.set_controls_allowed(True)
         self._reset_speed_measurement(speed + 1)  # safety fudges the speed
