@@ -10,7 +10,7 @@ class RadarInterface(RadarInterfaceBase):
     self.CP = CP
 
     self.continental_radar = CP.carFingerprint in (CAR.TESLA_MODEL_S_HW3, )
-    self.bosch_radar = CP.carFingerprint in (CAR.TESLA_MODEL_S_HW1, CAR.TESLA_MODEL_X_HW1, )  #  CAR.TESLA_MODEL_S_HW2, )
+    self.bosch_radar = CP.carFingerprint in (CAR.TESLA_MODEL_S_HW1, CAR.TESLA_MODEL_X_HW1, CAR.TESLA_MODEL_S_HW2, )
 
     messages = []
     if self.continental_radar:
@@ -20,13 +20,10 @@ class RadarInterface(RadarInterfaceBase):
       self.radar_point_frq = 16
     elif self.bosch_radar:
       messages.append(('TeslaRadarSguInfo', 8))
+
       self.num_points = 32
       self.trigger_msg = 878
-      freq_map = {
-        CAR.TESLA_MODEL_S_HW2: 10,
-        CAR.TESLA_MODEL_X_HW1: 10,
-      }
-      self.radar_point_frq = freq_map.get(CP.carFingerprint, 8)
+      self.radar_point_frq = 8
 
     if self.bosch_radar or self.continental_radar:
       for i in range(self.num_points):
@@ -35,21 +32,26 @@ class RadarInterface(RadarInterfaceBase):
           (f'RadarPoint{i}_B', self.radar_point_frq),
         ])
 
-    self.rcp = None if CP.radarUnavailable else CANParser(DBC[CP.carFingerprint][Bus.radar], messages, CANBUS.radar)
+    self.radar_off_can = CP.radarUnavailable
+    self.rcp = CANParser(DBC[CP.carFingerprint][Bus.radar], messages, CANBUS.radar)
+
     self.updated_messages = set()
     self.track_id = 0
 
   def update(self, can_msgs):
-    if self.rcp is None:
+
+    if self.radar_off_can or (self.rcp is None):
       return super().update(None)
 
     values = self.rcp.update(can_msgs)
     self.updated_messages.update(values)
 
-    if self.trigger_msg not in self.updated_messages:
-      return None
-
     ret = structs.RadarData()
+    if self.trigger_msg not in self.updated_messages:
+      return ret
+
+    if self.rcp is None:
+      return ret
 
     # Errors
     if not self.rcp.can_valid:
