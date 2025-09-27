@@ -33,7 +33,10 @@ class RadarInterface(RadarInterfaceBase):
         ])
 
     self.radar_off_can = CP.radarUnavailable
-    self.rcp = CANParser(DBC[CP.carFingerprint][Bus.radar], messages, CANBUS.radar)
+    if not  CP.radarUnavailable:
+      self.rcp = CANParser(DBC[CP.carFingerprint][Bus.radar], messages, CANBUS.radar)
+    else:
+      self.rcp = None
 
     self.updated_messages = set()
     self.track_id = 0
