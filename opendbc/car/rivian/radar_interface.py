@@ -66,9 +66,9 @@ class RadarInterface(RadarInterfaceBase):
         self.pts[addr].aRel = float('nan')
         self.pts[addr].yvRel = float('nan')
 
-        # Rivian radar picks up random things like guardrails etc. which sometimes cause phantom braking
-        # Filter this out and relying on openpilot vision for close distances
-        valid = self.pts[addr].dRel > 6.5
+        # Rivian's Short Range Radar can detect stationary objects like guardrails, which may cause phantom braking.
+        # Therefore, we ignore the SSR and rely on openpilot's vision for close distances
+        valid = msg['MODE'] in (2, 3)
 
       if not valid:
         if addr in self.pts:
