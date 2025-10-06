@@ -21,7 +21,7 @@ class CAR(Platforms):
   MG_5_EV = MgPlatformConfig(
     # TODO: verify this
     [
-      MgCarDocs("MG ZS EV 2021-24"),
+      MgCarDocs("MG 5 EV 2021-24"),
     ],
     CarSpecs(mass=1992., wheelbase=2.66, steerRatio=15.8),
   )
