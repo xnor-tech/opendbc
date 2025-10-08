@@ -51,6 +51,8 @@ class CarState(CarStateBase, CarStateExt):
 
     ret.steerFaultTemporary = cp.vl["EPAS_AdasStatus"]["EPAS_EacErrorCode"] != 0
 
+
+
     # Traffic Sign Detection
     current_sign_speed = int(cp_adas.vl["ACM_tsrCmd"]["ACM_tsrSpdDisClsMain"])
     if current_sign_speed in [0, 254, 255]:  # 0=No Recognition, 254=Reserved, 255=Invalid
@@ -79,6 +81,8 @@ class CarState(CarStateBase, CarStateExt):
     else:
       ret.cruiseState.speed = -1
 
+    # Cruise state
+    ret.cruiseState.enabled = cp_cam.vl["ACM_Status"]["ACM_FeatureStatus"] == 1
     ret.cruiseState.available = True  # cp.vl["VDM_AdasSts"]["VDM_AdasInterfaceStatus"] == 1
     ret.cruiseState.standstill = cp.vl["VDM_AdasSts"]["VDM_AdasVehicleHoldStatus"] == 1
 
