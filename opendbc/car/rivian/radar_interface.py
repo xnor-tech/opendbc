@@ -1,6 +1,6 @@
 import math
 
-from opendbc.can import CANParser, CANDefine
+from opendbc.can import CANParser
 from opendbc.car import Bus, structs
 from opendbc.car.interfaces import RadarInterfaceBase
 from opendbc.car.rivian.values import DBC
@@ -23,7 +23,6 @@ class RadarInterface(RadarInterfaceBase):
 
     self.radar_off_can = CP.radarUnavailable
     self.rcp = get_radar_can_parser(CP)
-    self.can_define = CANDefine(DBC[CP.carFingerprint][Bus.radar])
 
   def update(self, can_strings):
     if self.radar_off_can or (self.rcp is None):
@@ -49,26 +48,28 @@ class RadarInterface(RadarInterfaceBase):
       ret.errors.canError = True
 
     for addr in range(RADAR_START_ADDR, RADAR_START_ADDR + RADAR_MSG_COUNT):
-      name = f"RADAR_TRACK_{addr:x}"
-      msg = self.rcp.vl[name]
-      state = self.can_define.dv[name]["STATE"]
-      mode = self.can_define.dv[name]["MODE"]
+      msg = self.rcp.vl[f"RADAR_TRACK_{addr:x}"]
 
-      if state != "Empty":
-        if state in ("New", "New_updated", "New_coasting"):
+      # STATE: 1=New, 2=New_updated, 3=Updated, 4=Coasting, 7=New_coasting
+      valid = msg['STATE'] in (1, 2, 3, 4, 7)
+
+      # Rivian's Short Range Radar (SSR) detects close stationary objects like guardrails, which cause phantom braking.
+      # MODE: 1=SRR, 2=LRR, 3=SRR_and_LRR
+      valid = valid and msg['MODE'] in (2, 3)
+
+      if valid:
+        if addr not in self.pts or msg['STATE'] in (1, 2, 7):
           self.pts[addr] = structs.RadarData.RadarPoint()
           self.pts[addr].trackId = self.track_id
           self.track_id += 1
 
-        if addr in self.pts and mode in ("SRR", "LRR", "SRR_and_LRR"):
-          azimuth = math.radians(msg['AZIMUTH'])
-          self.pts[addr].measured = state in ("New", "New_updated", "Updated")
-          self.pts[addr].dRel = math.cos(azimuth) * msg['LONG_DIST']
-          self.pts[addr].yRel = 0.5 * -math.sin(azimuth) * msg['LONG_DIST']
-          self.pts[addr].vRel = msg['REL_SPEED']
-          self.pts[addr].aRel = float('nan')
-          self.pts[addr].yvRel = float('nan')
-
+        self.pts[addr].measured = msg['STATE'] in (2, 3)
+        azimuth = math.radians(msg['AZIMUTH'])
+        self.pts[addr].dRel = math.cos(azimuth) * msg['LONG_DIST']
+        self.pts[addr].yRel = 0.5 * -math.sin(azimuth) * msg['LONG_DIST']
+        self.pts[addr].vRel = msg['REL_SPEED']
+        self.pts[addr].aRel = float('nan')
+        self.pts[addr].yvRel = float('nan')
       elif addr in self.pts:
         del self.pts[addr]
 
