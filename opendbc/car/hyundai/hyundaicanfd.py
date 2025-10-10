@@ -3,6 +3,7 @@ import numpy as np
 from opendbc.car import CanBusBase
 from opendbc.car.crc import CRC16_XMODEM
 from opendbc.car.hyundai.values import HyundaiFlags
+from opendbc.sunnypilot.car.hyundai.lead_data_ext import CanFdLeadData
 
 
 class CanBus(CanBusBase):
@@ -66,6 +67,7 @@ def create_steering_messages(packer, CP, CAN, enabled, lat_active, apply_torque,
 
   return ret
 
+
 def create_suppress_lfa(packer, CAN, lfa_block_msg, lka_steering_alt):
   suppress_msg = "CAM_0x362" if lka_steering_alt else "CAM_0x2a4"
   msg_bytes = 32 if lka_steering_alt else 24
@@ -78,6 +80,7 @@ def create_suppress_lfa(packer, CAN, lfa_block_msg, lka_steering_alt):
   values["RIGHT_LANE_LINE"] = 0
   return packer.make_can_msg(suppress_msg, CAN.ACAN, values)
 
+
 def create_buttons(packer, CP, CAN, cnt, btn):
   values = {
     "COUNTER": cnt,
@@ -87,6 +90,7 @@ def create_buttons(packer, CP, CAN, cnt, btn):
 
   bus = CAN.ECAN if CP.flags & HyundaiFlags.CANFD_LKA_STEERING else CAN.CAM
   return packer.make_can_msg("CRUISE_BUTTONS", bus, values)
+
 
 def create_acc_cancel(packer, CP, CAN, cruise_info_copy):
   # TODO: why do we copy different values here?
@@ -118,6 +122,7 @@ def create_acc_cancel(packer, CP, CAN, cruise_info_copy):
   })
   return packer.make_can_msg("SCC_CONTROL", CAN.ECAN, values)
 
+
 def create_lfahda_cluster(packer, CAN, enabled, lfa_icon):
   values = {
     "HDA_ICON": 1 if enabled else 0,
@@ -127,7 +132,7 @@ def create_lfahda_cluster(packer, CAN, enabled, lfa_icon):
 
 
 def create_acc_control(packer, CAN, enabled, accel_last, accel, stopping, gas_override, set_speed, hud_control,
-                       main_cruise_enabled, tuning):
+                       lead_data: CanFdLeadData, main_cruise_enabled, tuning):
   jerk = 5
   jn = jerk / 50
   if not enabled or gas_override:
@@ -146,9 +151,10 @@ def create_acc_control(packer, CAN, enabled, accel_last, accel, stopping, gas_ov
     "JerkLowerLimit": tuning.jerk_lower,
     "JerkUpperLimit": tuning.jerk_upper,
 
-    "ACC_ObjDist": 1,
-    "ObjValid": 0,
-    "OBJ_STATUS": 2,
+    "ACC_ObjDist": int(lead_data.lead_distance),
+    "ACC_ObjRelSpd": lead_data.lead_rel_speed,
+    "ObjValid": int(not lead_data.lead_visible),
+    "SCC_ObjSta": 0 if not (enabled and lead_data.lead_visible) else (1 if gas_override else 2),
     "SET_ME_2": 0x4,
     "SET_ME_3": 0x3,
     "SET_ME_TMP_64": 0x64,

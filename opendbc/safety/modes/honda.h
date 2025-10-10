@@ -17,6 +17,16 @@
 #define HONDA_ALT_BRAKE_ADDR_CHECK(pt_bus)                                                                                              \
   {.msg = {{0x1BE, (pt_bus), 3, 50U, .max_counter = 3U, .ignore_quality_flag = true}, { 0 }, { 0 }}},  /* BRAKE_MODULE */  \
 
+#define HONDA_GAS_INTERCEPTOR_ADDR_CHECK \
+  {.msg = {{0x201, 0, 6, 50U, .max_counter = 15U, .ignore_checksum = true, .ignore_counter = true, .ignore_quality_flag = true}, { 0 }, { 0 }}}, \
+
+#define HONDA_N_COMMON_TX_MSGS \
+  {0xE4,  0, 5, .check_relay = true},   \
+  {0x194, 0, 4, .check_relay = true},   \
+  {0x1FA, 0, 8, .check_relay = false},  \
+  {0x30C, 0, 8, .check_relay = true},   \
+  {0x33D, 0, 5, .check_relay = true},   \
+
 enum {
   HONDA_BTN_NONE = 0,
   HONDA_BTN_MAIN = 1,
@@ -31,12 +41,14 @@ static bool honda_alt_brake_msg = false;
 static bool honda_fwd_brake = false;
 static bool honda_bosch_long = false;
 static bool honda_bosch_radarless = false;
+static bool honda_bosch_canfd = false;
+static bool honda_clarity = false;
 typedef enum {HONDA_NIDEC, HONDA_BOSCH} HondaHw;
 static HondaHw honda_hw = HONDA_NIDEC;
 
 
 static unsigned int honda_get_pt_bus(void) {
-  return ((honda_hw == HONDA_BOSCH) && !honda_bosch_radarless) ? 1U : 0U;
+  return ((honda_hw == HONDA_BOSCH) && !honda_bosch_radarless && !honda_bosch_canfd) ? 1U : 0U;
 }
 
 static uint32_t honda_get_checksum(const CANPacket_t *msg) {
@@ -62,12 +74,27 @@ static uint32_t honda_compute_checksum(const CANPacket_t *msg) {
 }
 
 static uint8_t honda_get_counter(const CANPacket_t *msg) {
-  int counter_byte = GET_LEN(msg) - 1U;
-  return (msg->data[counter_byte] >> 4U) & 0x3U;
+  uint8_t cnt = 0U;
+  if (msg->addr == 0x201U) {
+    // Signal: PEDAL_COUNTER
+    cnt = msg->data[4] & 0x0FU;
+  } else {
+    int counter_byte = GET_LEN(msg) - 1U;
+    cnt = (msg->data[counter_byte] >> 4U) & 0x3U;
+  }
+  return cnt;
+}
+
+static int HONDA_GET_INTERCEPTOR(const CANPacket_t *msg) {
+  uint16_t val1 = (uint16_t)((uint16_t)msg->data[0] << 8U) | (uint16_t)msg->data[1];
+  uint16_t val2 = (uint16_t)((uint16_t)msg->data[2] << 8U) | (uint16_t)msg->data[3];
+  uint16_t avg  = (uint16_t)((val1 + val2) / 2U);
+
+  return (int)avg;
 }
 
 static void honda_rx_hook(const CANPacket_t *msg) {
-  const bool pcm_cruise = ((honda_hw == HONDA_BOSCH) && !honda_bosch_long) || (honda_hw == HONDA_NIDEC);
+  const bool pcm_cruise = ((honda_hw == HONDA_BOSCH) && !honda_bosch_long) || ((honda_hw == HONDA_NIDEC) && !enable_gas_interceptor);
   unsigned int pt_bus = honda_get_pt_bus();
 
   // sample speed
@@ -146,8 +173,23 @@ static void honda_rx_hook(const CANPacket_t *msg) {
     }
   }
 
-  if (msg->addr == 0x17CU) {
-    gas_pressed = msg->data[0] != 0U;
+  // length check because bosch hardware also uses this id (0x201 w/ len = 8)
+  if (msg->addr == 0x201U) {
+    // panda interceptor threshold needs to be equivalent to openpilot threshold to avoid controls mismatches
+    // If thresholds are mismatched then it is possible for panda to see the gas fall and rise while openpilot is in the pre-enabled state
+    // Threshold calculated from DBC gains: round(((83.3 / 0.253984064) + (83.3 / 0.126992032)) / 2) = 492
+    const int honda_gas_interceptor_thrsld = 492;
+
+    int gas_interceptor = HONDA_GET_INTERCEPTOR(msg);
+    gas_pressed = gas_interceptor > honda_gas_interceptor_thrsld;
+
+    gas_interceptor_prev = gas_interceptor;
+  }
+
+  if (!enable_gas_interceptor) {
+    if (msg->addr == 0x17CU) {
+      gas_pressed = msg->data[0] != 0U;
+    }
   }
 
   // disable stock Honda AEB in alternative experience
@@ -155,6 +197,10 @@ static void honda_rx_hook(const CANPacket_t *msg) {
     if ((msg->bus == 2U) && (msg->addr == 0x1FAU)) {
       bool honda_stock_aeb = GET_BIT(msg, 29U);
       int honda_stock_brake = (msg->data[0] << 2) | (msg->data[1] >> 6);
+
+      if (honda_clarity) {
+        honda_stock_brake = (msg->data[6] << 2) | (msg->data[7] >> 6);
+      }
 
       // Forward AEB when stock braking is higher than openpilot braking
       // only stop forwarding when AEB event is over
@@ -207,6 +253,11 @@ static bool honda_tx_hook(const CANPacket_t *msg) {
   // BRAKE: safety check (nidec)
   if ((msg->addr == 0x1FAU) && (msg->bus == bus_pt)) {
     honda_brake = (msg->data[0] << 2) + ((msg->data[1] >> 6) & 0x3U);
+
+    if (honda_clarity) {
+      honda_brake = (msg->data[6] << 2) + ((msg->data[7] >> 6) & 0x3U);
+    }
+
     if (longitudinal_brake_checks(honda_brake, HONDA_NIDEC_LONG_LIMITS)) {
       tx = false;
     }
@@ -276,6 +327,13 @@ static bool honda_tx_hook(const CANPacket_t *msg) {
     }
   }
 
+  // GAS: safety check (interceptor)
+  if (msg->addr == 0x200U) {
+    if (longitudinal_interceptor_checks(msg)) {
+      tx = false;
+    }
+  }
+
   return tx;
 }
 
@@ -283,10 +341,17 @@ static safety_config honda_nidec_init(uint16_t param) {
   // 0x1FA is dynamically forwarded based on stock AEB
   // 0xE4 is steering on all cars except CRV and RDX, 0x194 for CRV and RDX,
   // 0x1FA is brake control, 0x30C is acc hud, 0x33D is lkas hud
-  static CanMsg HONDA_N_TX_MSGS[] = {{0xE4, 0, 5, .check_relay = true}, {0x194, 0, 4, .check_relay = true}, {0x1FA, 0, 8, .check_relay = false},
-                                     {0x30C, 0, 8, .check_relay = true}, {0x33D, 0, 5, .check_relay = true}};
+  static CanMsg HONDA_N_TX_MSGS[] = {HONDA_N_COMMON_TX_MSGS};
+
+  static CanMsg HONDA_N_INTERCEPTOR_TX_MSGS[] = {
+    HONDA_N_COMMON_TX_MSGS
+    {0x200, 0, 6, .check_relay = false},
+  };
 
   const uint16_t HONDA_PARAM_NIDEC_ALT = 4;
+
+  const uint16_t HONDA_PARAM_SP_CLARITY = 1;
+  const uint16_t HONDA_PARAM_GAS_INTERCEPTOR = 2;
 
   honda_hw = HONDA_NIDEC;
   honda_brake = 0;
@@ -295,10 +360,14 @@ static safety_config honda_nidec_init(uint16_t param) {
   honda_alt_brake_msg = false;
   honda_bosch_long = false;
   honda_bosch_radarless = false;
+  honda_bosch_canfd = false;
 
   safety_config ret;
 
   bool enable_nidec_alt = GET_FLAG(param, HONDA_PARAM_NIDEC_ALT);
+
+  honda_clarity = GET_FLAG(current_safety_param_sp, HONDA_PARAM_SP_CLARITY);
+  enable_gas_interceptor = GET_FLAG(current_safety_param_sp, HONDA_PARAM_GAS_INTERCEPTOR);
 
   if (enable_nidec_alt) {
     // For Nidecs with main on signal on an alternate msg (missing 0x326)
@@ -320,15 +389,34 @@ static safety_config honda_nidec_init(uint16_t param) {
 
   SET_TX_MSGS(HONDA_N_TX_MSGS, ret);
 
+  if (enable_gas_interceptor) {
+    if (enable_nidec_alt) {
+      static RxCheck honda_nidec_alt_interceptor_rx_checks[] = {
+        HONDA_COMMON_NO_SCM_FEEDBACK_RX_CHECKS(0)
+        {.msg = {{0x1FA, 2, 8, 50U, .max_counter = 3U, .ignore_quality_flag = true}, { 0 }, { 0 }}},  // BRAKE_COMMAND
+        HONDA_GAS_INTERCEPTOR_ADDR_CHECK
+      };
+
+      SET_RX_CHECKS(honda_nidec_alt_interceptor_rx_checks, ret);
+    } else {
+      static RxCheck honda_nidec_common_interceptor_rx_checks[] = {
+        HONDA_COMMON_RX_CHECKS(0)
+        {.msg = {{0x1FA, 2, 8, 50U, .max_counter = 3U, .ignore_quality_flag = true}, { 0 }, { 0 }}},  // BRAKE_COMMAND
+        HONDA_GAS_INTERCEPTOR_ADDR_CHECK
+      };
+
+      SET_RX_CHECKS(honda_nidec_common_interceptor_rx_checks, ret);
+    }
+
+    SET_TX_MSGS(HONDA_N_INTERCEPTOR_TX_MSGS, ret);
+  }
+
   return ret;
 }
 
 static safety_config honda_bosch_init(uint16_t param) {
-  // HONDA_BOSCH_TX_MSGS is used by Bosch and Bosch CAN FD
-  static CanMsg HONDA_BOSCH_TX_MSGS[] = {{0xE4, 0, 5, .check_relay = true}, {0xE5, 0, 8, .check_relay = true},
-                                         // Send buttons on powertrain bus: 0 for Bosch CAN FD, 1 for CAN
-                                         {0x296, 0, 4, .check_relay = false}, {0x296, 1, 4, .check_relay = false},
-                                         {0x33D, 0, 5, .check_relay = true}, {0x33DA, 0, 5, .check_relay = true}, {0x33DB, 0, 8, .check_relay = true}};  // Bosch
+  static CanMsg HONDA_BOSCH_TX_MSGS[] = {{0xE4, 0, 5, .check_relay = true}, {0xE5, 0, 8, .check_relay = true}, {0x296, 1, 4, .check_relay = false},
+                                         {0x33D, 0, 5, .check_relay = true}, {0x33D, 0, 8, .check_relay = true}, {0x33DA, 0, 5, .check_relay = true}, {0x33DB, 0, 8, .check_relay = true}};  // Bosch
 
   static CanMsg HONDA_BOSCH_LONG_TX_MSGS[] = {{0xE4, 1, 5, .check_relay = true}, {0x1DF, 1, 8, .check_relay = true}, {0x1EF, 1, 8, .check_relay = false},
                                               {0x1FA, 1, 8, .check_relay = false}, {0x30C, 1, 8, .check_relay = false}, {0x33D, 1, 5, .check_relay = true},
@@ -340,32 +428,37 @@ static safety_config honda_bosch_init(uint16_t param) {
   static CanMsg HONDA_RADARLESS_LONG_TX_MSGS[] = {{0xE4, 0, 5, .check_relay = true}, {0x33D, 0, 8, .check_relay = true}, {0x1C8, 0, 8, .check_relay = true},
                                                   {0x30C, 0, 8, .check_relay = true}};  // Bosch radarless w/ gas and brakes
 
+  static CanMsg HONDA_CANFD_TX_MSGS[] = {{0xE4, 0, 5, .check_relay = true}, {0x296, 0, 4, .check_relay = false}, {0x33D, 0, 8, .check_relay = true}};
+
+
   const uint16_t HONDA_PARAM_ALT_BRAKE = 1;
   const uint16_t HONDA_PARAM_RADARLESS = 8;
+  const uint16_t HONDA_PARAM_BOSCH_CANFD = 16;
 
-  static RxCheck honda_common_alt_brake_rx_checks[] = {
+  // Bosch radarless has the powertrain bus on bus 0
+  static RxCheck honda_bosch_pt0_rx_checks[] = {
+    HONDA_COMMON_RX_CHECKS(0)
+  };
+
+  static RxCheck honda_bosch_pt0_alt_brake_rx_checks[] = {
     HONDA_COMMON_RX_CHECKS(0)
     HONDA_ALT_BRAKE_ADDR_CHECK(0)
   };
 
-  static RxCheck honda_bosch_alt_brake_rx_checks[] = {
+  // Bosch has powertrain on bus 1, verified 0x1A6 does not exist
+  static RxCheck honda_bosch_pt1_rx_checks[] = {
+    HONDA_COMMON_RX_CHECKS(1)
+  };
+
+  static RxCheck honda_bosch_pt1_alt_brake_rx_checks[] = {
     HONDA_COMMON_RX_CHECKS(1)
     HONDA_ALT_BRAKE_ADDR_CHECK(1)
-  };
-
-  // Bosch has pt on bus 1, verified 0x1A6 does not exist
-  static RxCheck honda_bosch_rx_checks[] = {
-    HONDA_COMMON_RX_CHECKS(1)
-  };
-
-  // Nidec and bosch radarless has the powertrain bus on bus 0
-  static RxCheck honda_bosch_radarless_rx_checks[] = {
-    HONDA_COMMON_RX_CHECKS(0)
   };
 
   honda_hw = HONDA_BOSCH;
   honda_brake_switch_prev = false;
   honda_bosch_radarless = GET_FLAG(param, HONDA_PARAM_RADARLESS);
+  honda_bosch_canfd = GET_FLAG(param, HONDA_PARAM_BOSCH_CANFD);
   // Checking for alternate brake override from safety parameter
   honda_alt_brake_msg = GET_FLAG(param, HONDA_PARAM_ALT_BRAKE);
 
@@ -376,14 +469,18 @@ static safety_config honda_bosch_init(uint16_t param) {
 #endif
 
   safety_config ret;
-  if (honda_bosch_radarless && honda_alt_brake_msg) {
-    SET_RX_CHECKS(honda_common_alt_brake_rx_checks, ret);
-  } else if (honda_bosch_radarless) {
-    SET_RX_CHECKS(honda_bosch_radarless_rx_checks, ret);
-  } else if (honda_alt_brake_msg) {
-    SET_RX_CHECKS(honda_bosch_alt_brake_rx_checks, ret);
+  if (honda_bosch_radarless || honda_bosch_canfd) {
+    if (honda_alt_brake_msg) {
+      SET_RX_CHECKS(honda_bosch_pt0_alt_brake_rx_checks, ret);
+    } else {
+      SET_RX_CHECKS(honda_bosch_pt0_rx_checks, ret);
+    }
   } else {
-    SET_RX_CHECKS(honda_bosch_rx_checks, ret);
+   if (honda_alt_brake_msg) {
+     SET_RX_CHECKS(honda_bosch_pt1_alt_brake_rx_checks, ret);
+   } else {
+     SET_RX_CHECKS(honda_bosch_pt1_rx_checks, ret);
+   }
   }
 
   if (honda_bosch_radarless) {
@@ -392,6 +489,8 @@ static safety_config honda_bosch_init(uint16_t param) {
     } else {
       SET_TX_MSGS(HONDA_RADARLESS_TX_MSGS, ret);
     }
+  } else if (honda_bosch_canfd) {
+    SET_TX_MSGS(HONDA_CANFD_TX_MSGS, ret);
   } else {
     if (honda_bosch_long) {
       SET_TX_MSGS(HONDA_BOSCH_LONG_TX_MSGS, ret);
