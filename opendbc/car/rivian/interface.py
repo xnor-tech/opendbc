@@ -27,9 +27,8 @@ class CarInterface(CarInterfaceBase):
 
     # TODO: pending finding/handling missing set speed and fixing up radar parser
     ret.alphaLongitudinalAvailable = True
-    if alpha_long:
-      ret.openpilotLongitudinalControl = True
-      ret.safetyConfigs[0].safetyParam |= RivianSafetyFlags.LONG_CONTROL.value
+    ret.openpilotLongitudinalControl = True
+    ret.safetyConfigs[0].safetyParam |= RivianSafetyFlags.LONG_CONTROL.value
 
     ret.longitudinalActuatorDelay = 0.35
     ret.vEgoStopping = 0.15

@@ -21,6 +21,7 @@ class CarState(CarStateBase, CarStateExt):
     self.acm_lka_hba_cmd = None
     self.sccm_wheel_touch = None
     self.vdm_adas_status = None
+    self.acm_long_accel = 0
 
   def update(self, can_parsers) -> tuple[structs.CarState, structs.CarStateSP]:
     cp = can_parsers[Bus.pt]
@@ -50,8 +51,6 @@ class CarState(CarStateBase, CarStateExt):
     ret.steeringPressed = self.update_steering_pressed(abs(ret.steeringTorque) > 1.0, 5)
 
     ret.steerFaultTemporary = cp.vl["EPAS_AdasStatus"]["EPAS_EacErrorCode"] != 0
-
-
 
     # Traffic Sign Detection
     current_sign_speed = int(cp_adas.vl["ACM_tsrCmd"]["ACM_tsrSpdDisClsMain"])
@@ -120,6 +119,7 @@ class CarState(CarStateBase, CarStateExt):
     # Messages needed by carcontroller
     self.acm_lka_hba_cmd = copy.copy(cp_cam.vl["ACM_lkaHbaCmd"])
     self.vdm_adas_status = copy.copy(cp.vl["VDM_AdasSts"])
+    self.acm_long_accel = cp_cam.vl["ACM_longitudinalRequest"]["ACM_AccelerationRequest"]
 
     CarStateExt.update(self, ret, can_parsers)
 

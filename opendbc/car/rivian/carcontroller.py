@@ -40,7 +40,10 @@ class CarController(CarControllerBase, MadsCarController):
 
     # Longitudinal control
     if self.CP.openpilotLongitudinalControl:
-      accel = float(np.clip(actuators.accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX))
+      op_accel = actuators.accel
+      stock_accel = CS.acm_long_accel
+      accel = float(np.clip(stock_accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX))
+      accel = 0 if (CS.out.gasPressed or not CC.enabled) else accel
       can_sends.append(create_longitudinal(self.packer, self.frame, accel, CC.enabled))
     else:
       interface_status = None
