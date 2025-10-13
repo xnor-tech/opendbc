@@ -18,6 +18,10 @@ class CarController(CarControllerBase, MadsCarController):
 
     self.cancel_frames = 0
 
+    # accel transition
+    self.gas_released_frame = None
+    self.transition_frames = 200
+
   def update(self, CC, CC_SP, CS, now_nanos):
     MadsCarController.update(self, CC, CC_SP, CS)
     actuators = CC.actuators
@@ -42,8 +46,18 @@ class CarController(CarControllerBase, MadsCarController):
     if self.CP.openpilotLongitudinalControl:
       op_accel = actuators.accel
       stock_accel = CS.acm_long_accel
-      accel = float(np.clip(stock_accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX))
-      accel = 0 if (CS.out.gasPressed or not CC.enabled) else accel
+
+      if CS.out.gasPressed or not CC.enabled:
+        accel = op_accel
+        self.gas_released_frame = None
+      else:
+        if self.gas_released_frame is None:
+          self.gas_released_frame = self.frame
+        elapsed_frames = self.frame - self.gas_released_frame
+        blend_factor = min(elapsed_frames / self.transition_frames, 1.0)
+        accel = op_accel * (1 - blend_factor) + stock_accel * blend_factor
+
+      accel = float(np.clip(accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX))
       can_sends.append(create_longitudinal(self.packer, self.frame, accel, CC.enabled))
     else:
       interface_status = None
