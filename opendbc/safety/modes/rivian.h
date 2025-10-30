@@ -2,6 +2,9 @@
 
 #include "opendbc/safety/safety_declarations.h"
 
+// MADS button hold counter for 2-second requirement
+static uint16_t rivian_mads_button_hold_counter = 0U;
+
 static uint8_t rivian_get_counter(const CANPacket_t *msg) {
   uint8_t cnt = 0;
   if ((msg->addr == 0x208U) || (msg->addr == 0x150U)) {
@@ -91,9 +94,19 @@ static void rivian_rx_hook(const CANPacket_t *msg) {
       brake_pressed = (msg->data[2] >> 7) & 1U;
     }
 
-    // MADS button press (DOWN_2)
+    // MADS button press (DOWN_2) - require 2 second hold (200 cycles @ 100Hz)
     if (msg->addr == 0x162U) {
-      mads_button_press = ((msg->data[7] & 0x07U) == 4U) ? MADS_BUTTON_PRESSED : MADS_BUTTON_NOT_PRESSED;
+      bool button_down = ((msg->data[7] & 0x07U) == 4U);
+
+      if (button_down) {
+        rivian_mads_button_hold_counter += 1U;
+        // Only signal button press after 200 cycles (2 seconds)
+        mads_button_press = (rivian_mads_button_hold_counter >= 200U) ? MADS_BUTTON_PRESSED : MADS_BUTTON_NOT_PRESSED;
+      } else {
+        // Button released
+        rivian_mads_button_hold_counter = 0U;
+        mads_button_press = MADS_BUTTON_NOT_PRESSED;
+      }
     }
   }
 

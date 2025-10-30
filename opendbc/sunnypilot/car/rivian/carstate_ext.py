@@ -62,8 +62,7 @@ class CarStateExt:
 
           # 2s+: Toggle MADS
           if self.down_button_hold_counter >= 200 and not self.mads_toggle_hold_processed:
-              button_events.extend([structs.CarState.ButtonEvent(pressed=True, type=ButtonType.lkas),
-                                    structs.CarState.ButtonEvent(pressed=False, type=ButtonType.lkas)])
+              button_events.extend([structs.CarState.ButtonEvent(pressed=False, type=ButtonType.lkas)])
               self.mads_toggle_hold_processed = True
 
       else:
