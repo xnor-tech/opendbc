@@ -17,7 +17,7 @@ ButtonType = structs.CarState.ButtonEvent.Type
 
 # VDM_UserAdasRequest: 0=IDLE, 1=UP_1, 2=UP_2, 3=DOWN_1, 4=DOWN_2
 VDM_BUTTON_MAP = {
-  1: ButtonType.lkas,    # Toggle MADS
+  2: ButtonType.lkas,    # Toggle MADS
 }
 
 
@@ -33,9 +33,11 @@ class CarStateExt:
     self.set_speed = 10
     self.increase_button = False
     self.decrease_button = False
+    self.stalk_down = False
     self.distance_button = 0
     self.increase_counter = 0
     self.decrease_counter = 0
+    self.stalk_down_counter = 0
     self.vdm_user_adas_request = 0
 
   def update_stalk_controls(self, ret: structs.CarState, can_parsers: dict[StrEnum, CANParser]) -> list:
@@ -50,6 +52,7 @@ class CarStateExt:
   def update_longitudinal_upgrade(self, ret: structs.CarState, can_parsers: dict[StrEnum, CANParser]) -> list:
     cp_park = can_parsers[Bus.alt]
     cp_adas = can_parsers[Bus.adas]
+    cp = can_parsers[Bus.pt]
 
     button_events = []
     prev_increase_button = self.increase_button
@@ -89,6 +92,11 @@ class CarStateExt:
 
       if not ret.cruiseState.enabled:
         self.set_speed = ret.vEgoCluster
+
+      self.stalk_down = int(cp.vl["VDM_AdasSts"]["VDM_UserAdasRequest"]) in (3, 4)
+      self.stalk_down_counter = self.stalk_down_counter + 1 if self.stalk_down else 0
+      if self.stalk_down_counter == 50:
+        self.set_speed = ret.vEgoCluster if self.set_speed < ret.vEgoCluster else self.set_speed
 
       self.set_speed = max(MIN_SET_SPEED, min(self.set_speed, MAX_SET_SPEED))
       ret.cruiseState.speed = self.set_speed
