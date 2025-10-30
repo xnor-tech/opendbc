@@ -15,17 +15,9 @@ from opendbc.sunnypilot.car.rivian.values import RivianFlagsSP
 
 ButtonType = structs.CarState.ButtonEvent.Type
 
-
-class VDMUserAdasRequest(IntEnum):
-  IDLE = 0
-  UP_1 = 1
-  UP_2 = 2
-  DOWN_1 = 3
-  DOWN_2 = 4
-
-
+# VDM_UserAdasRequest: 0=IDLE, 1=UP_1, 2=UP_2, 3=DOWN_1, 4=DOWN_2
 VDM_BUTTON_MAP = {
-  VDMUserAdasRequest.DOWN_2: ButtonType.lkas,    # Toggle MADS
+  1: ButtonType.lkas,    # Toggle MADS
 }
 
 
@@ -46,36 +38,12 @@ class CarStateExt:
     self.decrease_counter = 0
     self.vdm_user_adas_request = 0
 
-    # Button hold timers for time-based actions
-    self.down_button_hold_counter = 0
-    self.mads_toggle_hold_processed = False
-
   def update_stalk_controls(self, ret: structs.CarState, can_parsers: dict[StrEnum, CANParser]) -> list:
       cp = can_parsers[Bus.pt]
-      self.vdm_user_adas_request = cp.vl["VDM_AdasSts"]["VDM_UserAdasRequest"]
+      vdm_user_adas_request = int(cp.vl["VDM_AdasSts"]["VDM_UserAdasRequest"])
 
-      button_events = []
-
-      if self.vdm_user_adas_request == VDMUserAdasRequest.DOWN_2:
-          # Button is HELD
-          self.down_button_hold_counter += 1
-
-          # 2s+: Toggle MADS
-          if self.down_button_hold_counter >= 200 and not self.mads_toggle_hold_processed:
-              button_events.extend([structs.CarState.ButtonEvent(pressed=False, type=ButtonType.lkas)])
-              self.mads_toggle_hold_processed = True
-
-      else:
-          # Button is RELEASED
-          if self.down_button_hold_counter > 0:
-              # 0.3s-1s: Set cruise speed to current cluster speed (triggers on release)
-              if 30 <= self.down_button_hold_counter < 100 and self.CP.openpilotLongitudinalControl:
-                  self.set_speed = max(MIN_SET_SPEED, min(self.set_speed, MAX_SET_SPEED))
-                  ret.cruiseState.speed = self.set_speed
-
-              # Reset counter and flag
-              self.down_button_hold_counter = 0
-              self.mads_toggle_hold_processed = False
+      button_events = create_button_events(vdm_user_adas_request, self.vdm_user_adas_request, VDM_BUTTON_MAP)
+      self.vdm_user_adas_request = vdm_user_adas_request
 
       return button_events
 
