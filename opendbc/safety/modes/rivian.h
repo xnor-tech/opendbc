@@ -93,7 +93,7 @@ static void rivian_rx_hook(const CANPacket_t *msg) {
 
     // MADS button press (DOWN_2)
     if (msg->addr == 0x162U) {
-      mads_button_press = ((msg->data[7] & 0x07U) == 4U) ? MADS_BUTTON_PRESSED : MADS_BUTTON_NOT_PRESSED;
+      mads_button_press = ((msg->data[7] & 0x07U) == 2U) ? MADS_BUTTON_PRESSED : MADS_BUTTON_NOT_PRESSED;
     }
   }
 
