@@ -17,7 +17,7 @@ ButtonType = structs.CarState.ButtonEvent.Type
 
 # VDM_UserAdasRequest: 0=IDLE, 1=UP_1, 2=UP_2, 3=DOWN_1, 4=DOWN_2
 VDM_BUTTON_MAP = {
-  2: ButtonType.lkas,    # Toggle MADS
+  1: ButtonType.lkas,    # Toggle MADS
 }
 
 
