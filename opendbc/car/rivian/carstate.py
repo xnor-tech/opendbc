@@ -52,31 +52,8 @@ class CarState(CarStateBase, CarStateExt):
 
     ret.steerFaultTemporary = cp.vl["EPAS_AdasStatus"]["EPAS_EacErrorCode"] != 0
 
-    # Traffic Sign Detection
-    current_sign_speed = int(cp_adas.vl["ACM_tsrCmd"]["ACM_tsrSpdDisClsMain"])
-    if current_sign_speed in [0, 254, 255]:  # 0=No Recognition, 254=Reserved, 255=Invalid
-      # If the speed sign is invalid, use the last valid detected speed.
-      current_sign_speed = self.sign_speed
-    else:
-      current_sign_speed = min(current_sign_speed * CV.MPH_TO_MS, MAX_SET_SPEED)  # 253=Unlimited_Speed
-
-    # Use the detected traffic sign speed only if it's a new value and within a reasonable range
-    # (approximately +/- ~20MPH) of the current vehicle speed to avoid false positives.
-    if self.sign_speed != current_sign_speed and abs(self.set_speed - current_sign_speed) <= 9:
-      self.set_speed = current_sign_speed
-    self.sign_speed = current_sign_speed
-
-    # If the driver is pressing the gas pedal and the vehicle speed exceeds the current set speed,
-    if ret.gasPressed and ret.vEgo > self.set_speed:
-      self.set_speed = ret.vEgo
-
-    if not ret.cruiseState.enabled:
-      self.set_speed = ret.vEgo
-
-    self.set_speed = max(MIN_SET_SPEED, min(self.set_speed, MAX_SET_SPEED))
-
     if self.CP.openpilotLongitudinalControl:
-      ret.cruiseState.speed = self.set_speed
+      ret.cruiseState.speed = max(MIN_SET_SPEED, min(ret.vEgo * 1.15, MAX_SET_SPEED))
     else:
       ret.cruiseState.speed = -1
 

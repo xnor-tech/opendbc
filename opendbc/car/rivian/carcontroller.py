@@ -5,6 +5,7 @@ from opendbc.car.lateral import apply_driver_steer_torque_limits
 from opendbc.car.interfaces import CarControllerBase
 from opendbc.car.rivian.riviancan import create_lka_steering, create_longitudinal, create_wheel_touch, create_adas_status
 from opendbc.car.rivian.values import CarControllerParams
+from opendbc.car.rivian.carstate import MIN_SET_SPEED
 
 from opendbc.sunnypilot.car.rivian.mads import MadsCarController
 
@@ -50,6 +51,9 @@ class CarController(CarControllerBase, MadsCarController):
       else:
         self.gas_released_frame = self.gas_released_frame or self.frame
         accel = CS.acm_long_accel * min((self.frame - self.gas_released_frame) / self.transition_frames, 1.0)
+
+        if CS.out.vEgo < MIN_SET_SPEED:
+          accel = actuators.accel
 
       accel = float(np.clip(accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX))
       can_sends.append(create_longitudinal(self.packer, self.frame, accel, CC.enabled))
