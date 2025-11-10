@@ -20,8 +20,7 @@ class CarController(CarControllerBase, MadsCarController):
     self.cancel_frames = 0
 
     # accel transition
-    self.gas_released_frame = None
-    self.transition_frames = 100
+    self.last_accel = 0
 
   def update(self, CC, CC_SP, CS, now_nanos):
     MadsCarController.update(self, CC, CC_SP, CS)
@@ -47,16 +46,20 @@ class CarController(CarControllerBase, MadsCarController):
     if self.CP.openpilotLongitudinalControl:
       if CS.out.gasPressed or not CC.enabled:
         accel = 0
-        self.gas_released_frame = None
       else:
-        self.gas_released_frame = self.gas_released_frame or self.frame
-        accel = CS.acm_long_accel * min((self.frame - self.gas_released_frame) / self.transition_frames, 1.0)
+        accel = CS.acm_long_accel
 
         if CS.out.vEgo < MIN_SET_SPEED:
           accel = actuators.accel
 
-      accel = float(np.clip(accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX))
-      can_sends.append(create_longitudinal(self.packer, self.frame, accel, CC.enabled))
+        # stock rivian ACC rate limits
+        accel_rate = 0.23
+        deccel_rate = 0.64
+
+        accel = np.clip(accel, self.last_accel - deccel_rate, self.last_accel + accel_rate)
+
+      self.last_accel = float(np.clip(accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX))
+      can_sends.append(create_longitudinal(self.packer, self.frame, self.last_accel, CC.enabled))
     else:
       interface_status = None
       if CC.cruiseControl.cancel:
