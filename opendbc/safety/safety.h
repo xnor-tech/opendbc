@@ -3,8 +3,8 @@
 #include "opendbc/safety/helpers.h"
 #include "opendbc/safety/lateral.h"
 #include "opendbc/safety/longitudinal.h"
-#include "opendbc/safety/safety_declarations.h"
-#include "opendbc/safety/board/can.h"
+#include "opendbc/safety/declarations.h"
+#include "opendbc/safety/can.h"
 
 // all the safety modes
 #include "opendbc/safety/modes/defaults.h"
@@ -22,6 +22,7 @@
 #include "opendbc/safety/modes/subaru_preglobal.h"
 #include "opendbc/safety/modes/mazda.h"
 #include "opendbc/safety/modes/nissan.h"
+#include "opendbc/safety/modes/volkswagen_mlb.h"
 #include "opendbc/safety/modes/volkswagen_mqb.h"
 #include "opendbc/safety/modes/volkswagen_pq.h"
 #include "opendbc/safety/modes/elm327.h"
@@ -343,7 +344,6 @@ void safety_tick(const safety_config *cfg) {
 
 static void relay_malfunction_set(void) {
   relay_malfunction = true;
-  fault_occurred(FAULT_RELAY_MALFUNCTION);
 }
 
 static void generic_rx_checks(void) {
@@ -380,7 +380,6 @@ static void stock_ecu_check(bool stock_ecu_detected) {
 
 static void relay_malfunction_reset(void) {
   relay_malfunction = false;
-  fault_recovered(FAULT_RELAY_MALFUNCTION);
 }
 
 // resets values and min/max for sample_t struct
@@ -413,12 +412,11 @@ int set_safety_hooks(uint16_t mode, uint16_t param) {
     {SAFETY_TESLA, &tesla_hooks},
     {SAFETY_MG, &mg_hooks},
     {SAFETY_TESLA_LEGACY, &tesla_legacy_hooks},
-#ifdef CANFD
     {SAFETY_HYUNDAI_CANFD, &hyundai_canfd_hooks},
-#endif
 #ifdef ALLOW_DEBUG
     {SAFETY_PSA, &psa_hooks},
     {SAFETY_SUBARU_PREGLOBAL, &subaru_preglobal_hooks},
+    {SAFETY_VOLKSWAGEN_MLB, &volkswagen_mlb_hooks},
     {SAFETY_VOLKSWAGEN_PQ, &volkswagen_pq_hooks},
     {SAFETY_ALLOUTPUT, &alloutput_hooks},
 #endif
