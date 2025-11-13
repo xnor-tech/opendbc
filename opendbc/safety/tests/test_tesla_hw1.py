@@ -10,7 +10,7 @@ from opendbc.car.vehicle_model import VehicleModel
 from opendbc.can import CANDefine
 from opendbc.safety.tests.libsafety import libsafety_py
 import opendbc.safety.tests.common as common
-from opendbc.safety.tests.common import CANPackerPanda, MAX_SPEED_DELTA, MAX_WRONG_COUNTERS, away_round, round_speed
+from opendbc.safety.tests.common import CANPackerSafety, MAX_SPEED_DELTA, MAX_WRONG_COUNTERS, away_round, round_speed
 
 MSG_DAS_steeringControl = 0x488
 MSG_DAS_Control_HW1 = 0x2b9
@@ -62,7 +62,7 @@ class TestTeslaHW1Safety(common.PandaCarSafetyTest, common.AngleSteeringSafetyTe
     self.VM = VehicleModel(CarInterface.get_non_essential_params("TESLA_MODEL_S_HW3"))
 
     # HW1 uses tesla_can DBC for most messages
-    self.packer = CANPackerPanda("tesla_can")
+    self.packer = CANPackerSafety("tesla_can")
 
     self.define = CANDefine("tesla_can")
     self.acc_states = {d: v for v, d in self.define.dv["DAS_control"]["DAS_accState"].items()}
@@ -78,7 +78,7 @@ class TestTeslaHW1Safety(common.PandaCarSafetyTest, common.AngleSteeringSafetyTe
     if increment_timer:
       self.safety.set_timer(self.cnt_angle_cmd * int(1e6 / self.LATERAL_FREQUENCY))
       self.__class__.cnt_angle_cmd += 1
-    return self.packer.make_can_msg_panda("DAS_steeringControl", bus, values)
+    return self.packer.make_can_msg_safety("DAS_steeringControl", bus, values)
 
   def _angle_meas_msg(self, angle: float, hands_on_level: int = 0, eac_status: int = 1, eac_error_code: int = 0):
     # HW1 uses EPAS_sysStatus message with EPAS_* signals (not EPAS3S_*)
@@ -88,30 +88,30 @@ class TestTeslaHW1Safety(common.PandaCarSafetyTest, common.AngleSteeringSafetyTe
       "EPAS_eacStatus": eac_status,
       "EPAS_eacErrorCode": eac_error_code
     }
-    return self.packer.make_can_msg_panda("EPAS_sysStatus", 0, values)
+    return self.packer.make_can_msg_safety("EPAS_sysStatus", 0, values)
 
   def _user_brake_msg(self, brake):
     # HW1 uses BrakeMessage with driverBrakeStatus signal
     values = {"driverBrakeStatus": 2 if brake else 1}
-    return self.packer.make_can_msg_panda("BrakeMessage", 0, values)
+    return self.packer.make_can_msg_safety("BrakeMessage", 0, values)
 
   def _speed_msg(self, speed):
     # HW1 uses ESP_B message with ESP_vehicleSpeed signal
     values = {"ESP_vehicleSpeed": speed * 3.6}  # Convert m/s to km/h
-    return self.packer.make_can_msg_panda("ESP_B", 0, values)
+    return self.packer.make_can_msg_safety("ESP_B", 0, values)
 
   def _vehicle_moving_msg(self, speed: float):
     values = {"DI_cruiseState": 3 if speed <= self.STANDSTILL_THRESHOLD else 2}
-    return self.packer.make_can_msg_panda("DI_state", 0, values)
+    return self.packer.make_can_msg_safety("DI_state", 0, values)
 
   def _user_gas_msg(self, gas):
     # HW1 uses DI_torque1 message (0x108) with DI_pedalPos signal
     values = {"DI_pedalPos": gas}
-    return self.packer.make_can_msg_panda("DI_torque1", 0, values)
+    return self.packer.make_can_msg_safety("DI_torque1", 0, values)
 
   def _pcm_status_msg(self, enable):
     values = {"DI_cruiseState": 2 if enable else 0}
-    return self.packer.make_can_msg_panda("DI_state", 0, values)
+    return self.packer.make_can_msg_safety("DI_state", 0, values)
 
   def _long_control_msg(self, set_speed, acc_state=0, jerk_limits=(0, 0), accel_limits=(0, 0), aeb_event=0, bus=0):
     # HW1 uses DAS_control message (0x2b9)
@@ -124,7 +124,7 @@ class TestTeslaHW1Safety(common.PandaCarSafetyTest, common.AngleSteeringSafetyTe
       "DAS_accelMin": accel_limits[0],
       "DAS_accelMax": accel_limits[1],
     }
-    return self.packer.make_can_msg_panda("DAS_control", bus, values)
+    return self.packer.make_can_msg_safety("DAS_control", bus, values)
 
   def _accel_msg(self, accel: float):
     return self._long_control_msg(10, accel_limits=(accel, max(accel, 0)))
