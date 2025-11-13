@@ -1,6 +1,6 @@
 #pragma once
 
-#include "opendbc/safety/safety_declarations.h"
+#include "opendbc/safety/declarations.h"
 
 static void mg_rx_hook(const CANPacket_t *msg) {
   if (msg->bus == 0U)  {
@@ -78,7 +78,7 @@ static safety_config mg_init(uint16_t param) {
     {.msg = {{0x242, 0, 8, .frequency = 50U, .ignore_checksum = true, .ignore_counter = true, .ignore_quality_flag = true}, { 0 }, { 0 }}},   // RADAR_HSC2_FrP00 (cruise state)
   };
 
-  UNUSED(param);
+  SAFETY_UNUSED(param);
   return BUILD_SAFETY_CFG(mg_rx_checks, MG_TX_MSGS);
 }
 
