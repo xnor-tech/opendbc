@@ -5,8 +5,6 @@ from opendbc.car.lateral import apply_driver_steer_torque_limits
 from opendbc.car.interfaces import CarControllerBase
 from opendbc.car.rivian.riviancan import create_lka_steering, create_longitudinal, create_wheel_touch, create_adas_status
 from opendbc.car.rivian.values import CarControllerParams
-from opendbc.car.rivian.carstate import MIN_SET_SPEED
-
 from opendbc.sunnypilot.car.rivian.mads import MadsCarController
 
 
@@ -21,6 +19,43 @@ class CarController(CarControllerBase, MadsCarController):
 
     # accel transition
     self.last_accel = 0
+
+  def get_acceleration(self, CS, CC):
+    # Stock Rivian ACC rate limits
+    max_accel_rate = 0.23
+    max_decel_rate = 0.64
+
+    accel_op = CC.actuators.accel
+    accel_stock = CS.acm_long_accel
+
+    # When both want to brake: use OP's smoother deceleration with rate limiting
+    if (accel_op < 0) and (accel_stock < 0):
+      target_accel = accel_op
+
+      # Soft braking gets lower rate limit for smoother feel
+      if target_accel > -2.0:
+        max_decel_rate = 0.15
+
+      # Don't rate limit brake release
+      if target_accel > self.last_accel:
+        final_accel = target_accel
+      else:
+        final_accel = max(target_accel, self.last_accel - max_decel_rate)
+
+        # When both want to accelerate: use openpilot's control
+    elif (accel_op >= 0.2) and (accel_stock >= 0.2):
+      final_accel = accel_op
+    # When they disagree: stock acts as governor (respects true set-speed limit)
+    else:
+      final_accel = accel_stock
+
+    # Apply rate limits to prevent abrupt changes
+    final_accel = np.clip(final_accel, self.last_accel - max_decel_rate, self.last_accel + max_accel_rate)
+
+    if CS.out.gasPressed or not CC.enabled:
+      final_accel = 0
+
+    return final_accel
 
   def update(self, CC, CC_SP, CS, now_nanos):
     MadsCarController.update(self, CC, CC_SP, CS)
@@ -44,20 +79,7 @@ class CarController(CarControllerBase, MadsCarController):
 
     # Longitudinal control
     if self.CP.openpilotLongitudinalControl:
-      if CS.out.gasPressed or not CC.enabled:
-        accel = 0
-      else:
-        accel = CS.acm_long_accel
-
-        if CS.out.vEgo < MIN_SET_SPEED:
-          accel = actuators.accel
-
-        # stock rivian ACC rate limits
-        accel_rate = 0.23
-        deccel_rate = 0.64
-
-        accel = np.clip(accel, self.last_accel - deccel_rate, self.last_accel + accel_rate)
-
+      accel = self.get_acceleration(CS, CC)
       self.last_accel = float(np.clip(accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX))
       can_sends.append(create_longitudinal(self.packer, self.frame, self.last_accel, CC.enabled))
     else:

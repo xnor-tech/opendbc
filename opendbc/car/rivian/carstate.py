@@ -53,7 +53,7 @@ class CarState(CarStateBase, CarStateExt):
     ret.steerFaultTemporary = cp.vl["EPAS_AdasStatus"]["EPAS_EacErrorCode"] != 0
 
     if self.CP.openpilotLongitudinalControl:
-      ret.cruiseState.speed = max(MIN_SET_SPEED, min(ret.vEgo * 1.15, MAX_SET_SPEED))
+      ret.cruiseState.speed = max(MIN_SET_SPEED, min(ret.vEgo * 1.4, MAX_SET_SPEED))
     else:
       ret.cruiseState.speed = -1
 
