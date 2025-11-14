@@ -32,25 +32,25 @@ class CarController(CarControllerBase, MadsCarController):
     if (accel_op < 0) and (accel_stock < 0):
       target_accel = accel_op
 
-      # Soft braking gets lower rate limit for smoother feel
-      if target_accel > -2.0:
-        max_decel_rate = 0.15
-
       # Don't rate limit brake release
-      if target_accel > self.last_accel:
-        final_accel = target_accel
+      if target_accel < self.last_accel:
+
+        current_max_decel_rate = max_decel_rate
+        if target_accel > -2.0:  # If it's a soft brake
+          current_max_decel_rate = 0.15
+
+        final_accel = max(target_accel, self.last_accel - current_max_decel_rate)
       else:
-        final_accel = max(target_accel, self.last_accel - max_decel_rate)
+        # Brake release: no rate limiting
+        final_accel = target_accel
 
-        # When both want to accelerate: use openpilot's control
-    elif (accel_op >= 0.2) and (accel_stock >= 0.2):
-      final_accel = accel_op
-    # When they disagree: stock acts as governor (respects true set-speed limit)
+    # Both accelerating: use OP's control with rate limits
+    elif (accel_op >= 0) and (accel_stock >= 0):
+      final_accel = np.clip(accel_op, self.last_accel - max_decel_rate, self.last_accel + max_accel_rate)
+
+    # Disagreement: use stock command as governor with rate limits
     else:
-      final_accel = accel_stock
-
-    # Apply rate limits to prevent abrupt changes
-    final_accel = np.clip(final_accel, self.last_accel - max_decel_rate, self.last_accel + max_accel_rate)
+      final_accel = np.clip(accel_stock, self.last_accel - max_decel_rate, self.last_accel + max_accel_rate)
 
     if CS.out.gasPressed or not CC.enabled:
       final_accel = 0
