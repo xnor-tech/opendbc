@@ -18,44 +18,10 @@ class CarController(CarControllerBase, MadsCarController):
     self.cancel_frames = 0
 
     # accel transition
+    self.decel_rate = 0
+    self.accel_rate = 0
     self.last_accel = 0
 
-  def get_acceleration(self, CS, CC):
-    # Stock Rivian ACC rate limits
-    max_accel_rate = 0.23
-    max_decel_rate = 0.64
-
-    accel_op = CC.actuators.accel
-    accel_stock = CS.acm_long_accel
-
-    # When both want to brake: use OP's smoother deceleration with rate limiting
-    if (accel_op < 0) and (accel_stock < 0):
-      target_accel = accel_op
-
-      # Don't rate limit brake release
-      if target_accel < self.last_accel:
-
-        current_max_decel_rate = max_decel_rate
-        if target_accel > -2.0:  # If it's a soft brake
-          current_max_decel_rate = 0.15
-
-        final_accel = max(target_accel, self.last_accel - current_max_decel_rate)
-      else:
-        # Brake release: no rate limiting
-        final_accel = target_accel
-
-    # Both accelerating: use OP's control with rate limits
-    elif (accel_op >= 0) and (accel_stock >= 0):
-      final_accel = np.clip(accel_op, self.last_accel - max_decel_rate, self.last_accel + max_accel_rate)
-
-    # Disagreement: use stock command as governor with rate limits
-    else:
-      final_accel = np.clip(accel_stock, self.last_accel - max_decel_rate, self.last_accel + max_accel_rate)
-
-    if CS.out.gasPressed or not CC.enabled:
-      final_accel = 0
-
-    return final_accel
 
   def update(self, CC, CC_SP, CS, now_nanos):
     MadsCarController.update(self, CC, CC_SP, CS)
@@ -79,7 +45,19 @@ class CarController(CarControllerBase, MadsCarController):
 
     # Longitudinal control
     if self.CP.openpilotLongitudinalControl:
-      accel = self.get_acceleration(CS, CC)
+      accel = CS.acm_long_accel
+
+      # Stock Rivian ACC rate limits
+      self.decel_rate = min(0.65, self.decel_rate + 0.05)
+      self.accel_rate = min(0.25, self.accel_rate + 0.05)
+
+      accel = np.clip(accel, self.last_accel - self.decel_rate, self.last_accel + self.accel_rate)
+
+      if CS.out.gasPressed or not CC.enabled:
+        accel = 0
+        self.decel_rate = 0
+        self.accel_rate = 0
+
       self.last_accel = float(np.clip(accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX))
       can_sends.append(create_longitudinal(self.packer, self.frame, self.last_accel, CC.enabled))
     else:
