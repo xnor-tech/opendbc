@@ -17,7 +17,7 @@ ButtonType = structs.CarState.ButtonEvent.Type
 
 # VDM_UserAdasRequest: 0=IDLE, 1=UP_1, 2=UP_2, 3=DOWN_1, 4=DOWN_2
 VDM_BUTTON_MAP = {
-  1: ButtonType.lkas,    # Toggle MADS
+  4: ButtonType.lkas,    # Toggle MADS
 }
 
 
@@ -93,7 +93,7 @@ class CarStateExt:
       if not ret.cruiseState.enabled:
         self.set_speed = ret.vEgoCluster
 
-      self.stalk_down = int(cp.vl["VDM_AdasSts"]["VDM_UserAdasRequest"]) in (3, 4)
+      self.stalk_down = int(cp.vl["VDM_AdasSts"]["VDM_UserAdasRequest"]) == 3
       self.stalk_down_counter = self.stalk_down_counter + 1 if self.stalk_down else 0
       if self.stalk_down_counter == 50:
         self.set_speed = ret.vEgoCluster if self.set_speed < ret.vEgoCluster else self.set_speed
