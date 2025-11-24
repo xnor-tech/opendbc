@@ -44,7 +44,7 @@ class CarController(CarControllerBase, MadsCarController):
       can_sends.append(create_longitudinal(self.packer, self.frame, accel, CC.enabled))
 
     interface_status = None
-    if CC.cruiseControl.cancel:
+    if CC.cruiseControl.cancel or not CC.enabled:
       # if there is a noEntry, we need to send a status of "available" before the ACM will accept "unavailable"
       # send "available" right away as the VDM itself takes a few frames to acknowledge
       interface_status = 1 if self.cancel_frames < 5 else 0
