@@ -75,6 +75,19 @@ def create_longitudinal(packer, frame, accel, enabled):
   values["ACM_longitudinalRequest_Checksum"] = checksum(data[1:], 0x1D, 0x12)
   return packer.make_can_msg("ACM_longitudinalRequest", 0, values)
 
+def copy_longitudinal(packer, acm_longitudinal_request, enabled):
+  values = {s: acm_longitudinal_request[s] for s in (
+    "ACM_AccelerationRequest",
+    "ACM_PrndRequest",
+    "ACM_VehicleHoldRequest",
+    "ACM_longitudinalRequest_Counter"
+  )}
+
+  values["ACM_longInterfaceEnable"] = 1 if enabled else 0
+
+  data = packer.make_can_msg("ACM_longitudinalRequest", 0, values)[1]
+  values["ACM_longitudinalRequest_Checksum"] = checksum(data[1:], 0x1D, 0x12)
+  return packer.make_can_msg("ACM_longitudinalRequest", 0, values)
 
 def create_adas_status(packer, vdm_adas_status, interface_status):
   values = {s: vdm_adas_status[s] for s in (

@@ -25,15 +25,15 @@ class CarInterface(CarInterfaceBase):
     ret.steerControlType = structs.CarParams.SteerControlType.torque
     ret.radarUnavailable = True
 
-    # TODO: pending finding/handling missing set speed and fixing up radar parser
-    ret.alphaLongitudinalAvailable = True
-    ret.openpilotLongitudinalControl = True
-    ret.safetyConfigs[0].safetyParam |= RivianSafetyFlags.LONG_CONTROL.value
+    # TODO: pending finding/handling missing set speed
+    ret.alphaLongitudinalAvailable = False
+    if alpha_long:
+      ret.openpilotLongitudinalControl = True
+      ret.safetyConfigs[0].safetyParam |= RivianSafetyFlags.LONG_CONTROL.value
 
     ret.longitudinalActuatorDelay = 0.35
-    ret.vEgoStopping = 0.15
-    ret.stoppingDecelRate = 0.3
-    ret.stopAccel = -0.55
+    ret.vEgoStopping = 0.25
+    ret.stopAccel = 0
 
     return ret
 

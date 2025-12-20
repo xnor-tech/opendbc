@@ -3,8 +3,9 @@ from opendbc.can import CANPacker
 from opendbc.car import Bus
 from opendbc.car.lateral import apply_driver_steer_torque_limits
 from opendbc.car.interfaces import CarControllerBase
-from opendbc.car.rivian.riviancan import create_lka_steering, create_longitudinal, create_wheel_touch, create_adas_status
+from opendbc.car.rivian.riviancan import create_lka_steering, create_longitudinal, create_wheel_touch, create_adas_status, copy_longitudinal
 from opendbc.car.rivian.values import CarControllerParams
+
 from opendbc.sunnypilot.car.rivian.mads import MadsCarController
 
 
@@ -16,12 +17,6 @@ class CarController(CarControllerBase, MadsCarController):
     self.packer = CANPacker(dbc_names[Bus.pt])
 
     self.cancel_frames = 0
-
-    # accel transition
-    self.decel_rate = 0
-    self.accel_rate = 0
-    self.last_accel = 0
-
 
   def update(self, CC, CC_SP, CS, now_nanos):
     MadsCarController.update(self, CC, CC_SP, CS)
@@ -45,32 +40,10 @@ class CarController(CarControllerBase, MadsCarController):
 
     # Longitudinal control
     if self.CP.openpilotLongitudinalControl:
-      accel = CS.acm_long_accel
-
-      # Stock Rivian ACC rate limits
-      self.decel_rate = min(0.65, self.decel_rate + 0.05)
-      self.accel_rate = min(0.25, self.accel_rate + 0.05)
-
-      accel = np.clip(accel, self.last_accel - self.decel_rate, self.last_accel + self.accel_rate)
-
-      if CS.out.gasPressed or not CC.enabled:
-        accel = 0
-        self.decel_rate = 0
-        self.accel_rate = 0
-
-      self.last_accel = float(np.clip(accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX))
-      can_sends.append(create_longitudinal(self.packer, self.frame, self.last_accel, CC.enabled))
+      accel = float(np.clip(actuators.accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX))
+      can_sends.append(create_longitudinal(self.packer, self.frame, accel, CC.enabled))
     else:
-      interface_status = None
-      if CC.cruiseControl.cancel:
-        # if there is a noEntry, we need to send a status of "available" before the ACM will accept "unavailable"
-        # send "available" right away as the VDM itself takes a few frames to acknowledge
-        interface_status = 1 if self.cancel_frames < 5 else 0
-        self.cancel_frames += 1
-      else:
-        self.cancel_frames = 0
-
-      can_sends.append(create_adas_status(self.packer, CS.vdm_adas_status, interface_status))
+      can_sends.append(copy_longitudinal(self.packer, CS.acm_longitudinal_request, CC.enabled))
 
     new_actuators = actuators.as_builder()
     new_actuators.torque = apply_torque / steer_max
