@@ -76,6 +76,16 @@ class CAR(Platforms):
       Bus.radar: 'tesla_radar_bosch_generated',
     },
   )
+  TESLA_MODEL_X_HW2 = TeslaPlatformConfig(
+    [CarDocs("Tesla Model X (with HW2) 2016-19", "All", car_parts=CarParts.common([CarHarness.tesla_model_sx_hw2]))],
+    CarSpecs(mass=2100., wheelbase=2.960, steerRatio=15.0),
+    {
+      Bus.chassis: 'tesla_can',
+      Bus.party: 'tesla_can',
+      Bus.pt: 'tesla_powertrain',
+      Bus.radar: 'tesla_radar_bosch_generated',
+    },
+  )
   TESLA_MODEL_S = TeslaPlatformConfig(
     [TeslaCarDocsHW4("Tesla Model S (with HW4) 2024")],
     CarSpecs(mass=2166., wheelbase=2.960, steerRatio=12.0),
@@ -203,4 +213,4 @@ DBC = CAR.create_dbc_map()
 
 STEER_THRESHOLD = 1
 
-LEGACY_CARS = (CAR.TESLA_MODEL_S_HW1, CAR.TESLA_MODEL_S_HW2, CAR.TESLA_MODEL_S_HW3, CAR.TESLA_MODEL_X_HW1)
+LEGACY_CARS = (CAR.TESLA_MODEL_S_HW1, CAR.TESLA_MODEL_S_HW2, CAR.TESLA_MODEL_S_HW3, CAR.TESLA_MODEL_X_HW1, CAR.TESLA_MODEL_X_HW2)
