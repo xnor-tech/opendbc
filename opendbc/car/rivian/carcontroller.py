@@ -43,7 +43,7 @@ class CarController(CarControllerBase, MadsCarController):
       accel = float(np.clip(actuators.accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX))
       can_sends.append(create_longitudinal(self.packer, self.frame, accel, CC.enabled))
     else:
-      can_sends.append(copy_longitudinal(self.packer, CS.acm_longitudinal_request, CC.enabled))
+      can_sends.append(copy_longitudinal(self.packer, self.frame, CS.acm_longitudinal_request, CC.enabled))
 
     new_actuators = actuators.as_builder()
     new_actuators.torque = apply_torque / steer_max
