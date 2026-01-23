@@ -19,13 +19,18 @@ class MgPlatformConfig(PlatformConfig):
 
 class CAR(Platforms):
   MG_5_EV = MgPlatformConfig(
-    # TODO: verify this
     [
       MgCarDocs("MG 5 EV 2021-24"),
     ],
-    CarSpecs(mass=1992., wheelbase=2.66, steerRatio=15.8),
+    CarSpecs(mass=1640., wheelbase=2.66, steerRatio=15.8),
   )
 
+  MG_ZS_EV = MgPlatformConfig(
+    [
+      MgCarDocs("MG ZS EV 2022"),
+    ],
+    CarSpecs(mass=1590., wheelbase=2.58, steerRatio=15.8),
+  )
 
 MG_VERSION_REQUEST = bytes([uds.SERVICE_TYPE.READ_DATA_BY_IDENTIFIER]) + \
   p16(0xf1a0)
@@ -68,6 +73,7 @@ class CarControllerParams:
 
 class MgSafetyFlags(IntFlag):
   LONG_CONTROL = 1
+  ALT_BRAKE = 2
 
 
 DBC = CAR.create_dbc_map()

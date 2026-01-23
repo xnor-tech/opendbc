@@ -139,6 +139,12 @@ BO_ 532 SCS_HSC2_FrP09: 6 SCSABS
  SG_ BrkPdlDrvrAppdPrsAlvRCHSC2 : 2|2@0+ (1,0) [0|3] ""  FVCM
  SG_ BrkPdlDrvrAppdPrsVHSC2 : 0|1@0+ (1,0) [0|1] ""  FVCM
 
+BO_ 572 SCS_HSC2_FrP19: 8 SCSABS
+ SG_ VehSpdAvgHSC2 : 22|15@0+ (0.015625,0) [0|511.984] "km/h"  FVCM,FDR
+ SG_ VehSpdAvgAlvRCHSC2 : 39|4@0+ (1,0) [0|15] ""  FVCM,FDR
+ SG_ VehSpdAvgPVHSC2 : 7|16@0+ (1,0) [0|65535] ""  FVCM,FDR
+ SG_ VehSpdAvgVHSC2 : 23|1@0+ (1,0) [0|1] ""  FVCM,FDR
+
 BO_ 578 RADAR_HSC2_FrP00: 8 FDR
  SG_ ACCAccReqValHSC2 : 2|11@0+ (0.005,-7.22) [-7.22|3.015] "" SCSABS
  SG_ ACCSysAlvRlngCtr_SCSHSC2 : 6|4@0+ (1,0) [0|15] "" SCSABS

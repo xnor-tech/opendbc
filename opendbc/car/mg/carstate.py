@@ -1,7 +1,7 @@
 from opendbc.can.parser import CANParser
 from opendbc.car import Bus, structs
 from opendbc.car.interfaces import CarStateBase
-from opendbc.car.mg.values import DBC, GEAR_MAP
+from opendbc.car.mg.values import CAR, DBC, GEAR_MAP
 from opendbc.car.common.conversions import Conversions as CV
 
 GearShifter = structs.CarState.GearShifter
@@ -17,7 +17,7 @@ class CarState(CarStateBase):
     ret = structs.CarState()
 
     # Vehicle speed
-    ret.vEgoRaw = cp.vl["SCS_HSC2_FrP15"]["VehSpdAvgDrvnHSC2"] * CV.KPH_TO_MS
+    ret.vEgoRaw = cp.vl["SCS_HSC2_FrP19"]["VehSpdAvgHSC2"] * CV.KPH_TO_MS
     ret.vEgo, ret.aEgo = self.update_speed_kf(ret.vEgoRaw)
     ret.standstill = cp.vl["SCS_HSC2_FrP24"]["VehSdslStsHSC2"] == 1
 
@@ -26,7 +26,10 @@ class CarState(CarStateBase):
 
     # Brake pedal
     ret.brake = 0
-    ret.brakePressed = cp.vl["EHBS_HSC2_FrP00"]["BrkPdlAppdHSC2"] == 1
+    if self.CP.carFingerprint == CAR.MG_ZS_EV:
+      ret.brakePressed = cp.vl["GW_HSC2_HCU_FrP00"]["EPTBrkPdlDscrtInptStsHSC2"] == 1
+    else:
+      ret.brakePressed = cp.vl["EHBS_HSC2_FrP00"]["BrkPdlAppdHSC2"] == 1
 
     # Steering wheel
     ret.steeringAngleDeg = cp.vl["SAS_HSC2_FrP00"]["StrgWhlAngHSC2"]

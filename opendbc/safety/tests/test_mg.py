@@ -32,8 +32,8 @@ class TestMGSafety(common.PandaCarSafetyTest, common.DriverTorqueSteeringSafetyT
     return self.packer.make_can_msg_panda("FVCM_HSC2_FrP03", 0, values)
 
   def _speed_msg(self, speed):
-    values = {"VehSpdAvgDrvnHSC2": speed * 3.6}
-    return self.packer.make_can_msg_panda("SCS_HSC2_FrP15", 0, values)
+    values = {"VehSpdAvgHSC2": speed * 3.6}
+    return self.packer.make_can_msg_panda("SCS_HSC2_FrP19", 0, values)
 
   def _torque_driver_msg(self, torque):
     values = {"DrvrStrgDlvrdToqHSC2": torque}
@@ -50,6 +50,21 @@ class TestMGSafety(common.PandaCarSafetyTest, common.DriverTorqueSteeringSafetyT
   def _pcm_status_msg(self, enable):
     values = {"ACCSysSts_RadarHSC2": 2 if enable else 1}
     return self.packer.make_can_msg_panda("RADAR_HSC2_FrP00", 0, values)
+
+
+class TestMGAltBrakeSafety(TestMGSafety):
+  """
+    Covers the MG safety mode with an alternate brake message (MG ZS EV)
+  """
+  def setUp(self):
+    self.packer = CANPackerPanda("mg")
+    self.safety = libsafety_py.libsafety
+    self.safety.set_safety_hooks(CarParams.SafetyModel.mg, 2)  # ALT_BRAKE flag
+    self.safety.init_tests()
+
+  def _user_brake_msg(self, brake):
+    values = {"EPTBrkPdlDscrtInptStsHSC2": 1 if brake else 0}
+    return self.packer.make_can_msg_panda("GW_HSC2_HCU_FrP00", 0, values)
 
 
 if __name__ == "__main__":
