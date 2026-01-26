@@ -2,6 +2,8 @@
 
 #include "opendbc/safety/declarations.h"
 
+bool rivian_longitudinal = false;
+
 static uint8_t rivian_get_counter(const CANPacket_t *msg) {
   // Signal: ESP_Status_Counter, VDM_PropStatus_Counter
   return msg->data[1] & 0xFU;
@@ -129,7 +131,7 @@ static bool rivian_tx_hook(const CANPacket_t *msg) {
     }
 
     // Longitudinal control
-    if (msg->addr == 0x160U) {
+    if (msg->addr == 0x160U && rivian_longitudinal) {
       int raw_accel = ((msg->data[2] << 3) | (msg->data[3] >> 5)) - 1024U;
       if (longitudinal_accel_checks(raw_accel, RIVIAN_LONG_LIMITS)) {
         tx = false;
@@ -143,10 +145,10 @@ static bool rivian_tx_hook(const CANPacket_t *msg) {
 static safety_config rivian_init(uint16_t param) {
   // SCCM_WheelTouch: for hiding hold wheel alert
   // VDM_AdasSts: for canceling stock ACC
-  // 0x120 = ACM_lkaHbaCmd, 0x321 = SCCM_WheelTouch, 0x162 = VDM_AdasSts
-  static const CanMsg RIVIAN_TX_MSGS[] = {{0x120, 0, 8, .check_relay = true}, {0x321, 2, 7, .check_relay = true}, {0x162, 2, 8, .check_relay = true}};
+  // 0x120 = ACM_lkaHbaCmd, 0x321 = SCCM_WheelTouch, 0x160 = ACM_longitudinalRequest
+  static const CanMsg RIVIAN_TX_MSGS[] = {{0x120, 0, 8, .check_relay = true}, {0x160, 0, 5, .check_relay = true}};
   // 0x160 = ACM_longitudinalRequest
-  static const CanMsg RIVIAN_LONG_TX_MSGS[] = {{0x120, 0, 8, .check_relay = true}, {0x321, 2, 7, .check_relay = true}, {0x160, 0, 5, .check_relay = true}};
+  static const CanMsg RIVIAN_LONG_TX_MSGS[] = {{0x120, 0, 8, .check_relay = true}, {0x160, 0, 5, .check_relay = true}};
 
   static RxCheck rivian_rx_checks[] = {
     {.msg = {{0x208, 0, 8, 50U, .max_counter = 14U}, { 0 }, { 0 }}},                                                             // ESP_Status (speed)
@@ -156,9 +158,8 @@ static safety_config rivian_init(uint16_t param) {
     {.msg = {{0x100, 2, 8, 100U, .ignore_checksum = true, .ignore_counter = true, .ignore_quality_flag = true}, { 0 }, { 0 }}},  // ACM_Status (cruise state)
   };
 
-  bool rivian_longitudinal = false;
 
-  SAFETY_UNUSED(param);
+  UNUSED(param);
   #ifdef ALLOW_DEBUG
     const int FLAG_RIVIAN_LONG_CONTROL = 1;
     rivian_longitudinal = GET_FLAG(param, FLAG_RIVIAN_LONG_CONTROL);

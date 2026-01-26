@@ -2,7 +2,7 @@ import copy
 from opendbc.can import CANParser
 from opendbc.car import Bus, structs
 from opendbc.car.interfaces import CarStateBase
-from opendbc.car.rivian.values import DBC, GEAR_MAP
+from opendbc.car.rivian.values import CAR, DBC, GEAR_MAP
 from opendbc.car.common.conversions import Conversions as CV
 from opendbc.sunnypilot.car.rivian.carstate_ext import CarStateExt
 
@@ -18,6 +18,7 @@ class CarState(CarStateBase, CarStateExt):
     self.acm_lka_hba_cmd = None
     self.sccm_wheel_touch = None
     self.vdm_adas_status = None
+    self.acm_longitudinal_request = None
 
   def update(self, can_parsers) -> tuple[structs.CarState, structs.CarStateSP]:
     cp = can_parsers[Bus.pt]
@@ -74,14 +75,14 @@ class CarState(CarStateBase, CarStateExt):
     ret.gearShifter = GEAR_MAP.get(int(cp.vl["VDM_PropStatus"]["VDM_Prndl_Status"]), GearShifter.unknown)
 
     # Doors
-    ret.doorOpen = any(cp_adas.vl["IndicatorLights"][door] != 2 for door in ("RearDriverDoor", "FrontPassengerDoor", "DriverDoor", "RearPassengerDoor"))
+    ret.doorOpen = any(cp_adas.vl["IndicatorLights"][door] != 2 for door in ("RearDriverDoor", "FrontPassengerDoor", "DriverDoor", "RearPassengerDoor")) if self.CP.carFingerprint == CAR.RIVIAN_R1_GEN1 else False
 
     # Blinkers
     ret.leftBlinker = cp_adas.vl["IndicatorLights"]["TurnLightLeft"] in (1, 2)
     ret.rightBlinker = cp_adas.vl["IndicatorLights"]["TurnLightRight"] in (1, 2)
 
     # Seatbelt
-    ret.seatbeltUnlatched = cp.vl["RCM_Status"]["RCM_Status_IND_WARN_BELT_DRIVER"] != 0
+    ret.seatbeltUnlatched = cp.vl["RCM_Status"]["RCM_Status_IND_WARN_BELT_DRIVER"] != 0 if self.CP.carFingerprint == CAR.RIVIAN_R1_GEN1 else cp.vl["VDM_CGM_GW"]["CGM_DriverPresent"] != 1
 
     # Blindspot
     # ret.leftBlindspot = False
@@ -92,8 +93,9 @@ class CarState(CarStateBase, CarStateExt):
 
     # Messages needed by carcontroller
     self.acm_lka_hba_cmd = copy.copy(cp_cam.vl["ACM_lkaHbaCmd"])
-    self.sccm_wheel_touch = copy.copy(cp.vl["SCCM_WheelTouch"])
+    self.sccm_wheel_touch = copy.copy(cp.vl["SCCM_WheelTouch"]) if self.CP.carFingerprint == CAR.RIVIAN_R1_GEN1 else None
     self.vdm_adas_status = copy.copy(cp.vl["VDM_AdasSts"])
+    self.acm_longitudinal_request = copy.copy(cp_cam.vl["ACM_longitudinalRequest"])
 
     CarStateExt.update(self, ret, can_parsers)
 

@@ -2787,6 +2787,26 @@
     ],
     "package": "All"
   },
+  "Rivian R1S 2025": {
+    "platform": "RIVIAN_R1_GEN2",
+    "make": "Rivian",
+    "brand": "rivian",
+    "model": "R1S",
+    "year": [
+      "2025"
+    ],
+    "package": "All"
+  },
+  "Rivian R1T 2025": {
+    "platform": "RIVIAN_R1_GEN2",
+    "make": "Rivian",
+    "brand": "rivian",
+    "model": "R1T",
+    "year": [
+      "2025"
+    ],
+    "package": "All"
+  },
   "SEAT Ateca 2016-23": {
     "platform": "SEAT_ATECA_MK1",
     "make": "SEAT",
