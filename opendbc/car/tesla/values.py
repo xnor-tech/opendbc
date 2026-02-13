@@ -48,19 +48,15 @@ class CAR(Platforms):
       TeslaCarDocsHW4("Tesla Model 3 (with HW4) 2024-25"),
     ],
     CarSpecs(mass=1899., wheelbase=2.875, steerRatio=12.0),
+    {Bus.party: 'tesla_model3_party', Bus.radar: 'tesla_radar_continental_generated'},
   )
   TESLA_MODEL_Y = TeslaPlatformConfig(
     [
       TeslaCarDocsHW3("Tesla Model Y (with HW3) 2020-23"),
       TeslaCarDocsHW4("Tesla Model Y (with HW4) 2024-25"),
-     ],
+    ],
     CarSpecs(mass=2072., wheelbase=2.890, steerRatio=12.0),
-  )
-  TESLA_MODEL_Y_JUNIPER = TeslaPlatformConfig(
-    [
-      TeslaCarDocsHW4("Tesla Model Y JUNIPER (with HW4) 2025-26"),
-     ],
-    CarSpecs(mass=2072., wheelbase=2.890, steerRatio=12.0),
+    {Bus.party: 'tesla_model3_party', Bus.radar: 'tesla_radar_continental_generated'},
   )
   TESLA_MODEL_X = TeslaPlatformConfig(
     [TeslaCarDocsHW4("Tesla Model X (with HW4) 2024")],
@@ -134,10 +130,18 @@ FW_QUERY_CONFIG = FwQueryConfig(
   ]
 )
 
+# Cars with this EPS FW have FSD 14 and use TeslaFlags.FSD_14
+FSD_14_FW = {
+  CAR.TESLA_MODEL_Y: [
+    b'TeMYG4_Legacy3Y_0.0.0 (6),Y4003.04.0',
+    b'TeMYG4_Main_0.0.0 (77),Y4003.05.4',
+  ]
+}
+
 
 class CANBUS:
   party = 0
-  radar = 1
+  vehicle = 1
   autopilot_party = 2
 
   # only needed on raven
@@ -190,14 +194,18 @@ class TeslaLegacyParams(IntFlag):
 
 class TeslaSafetyFlags(IntFlag):
   LONG_CONTROL = 1
-  FLAG_EXTERNAL_PANDA = 2
-  FLAG_HW1 = 4
-  FLAG_HW2 = 8
-  FLAG_HW3 = 16
+  FSD_14 = 2
+  FLAG_EXTERNAL_PANDA = 4
+  FLAG_HW1 = 8
+  FLAG_HW2 = 16
+  FLAG_HW3 = 32
 
 
 class TeslaFlags(IntFlag):
   LONG_CONTROL = 1
+  FSD_14 = 2
+  MISSING_DAS_SETTINGS = 4
+
 
 DBC = CAR.create_dbc_map()
 
