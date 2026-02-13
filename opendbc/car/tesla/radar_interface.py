@@ -1,7 +1,7 @@
 from opendbc.can import CANParser
 from opendbc.car import Bus, structs
 from opendbc.car.interfaces import RadarInterfaceBase
-from opendbc.car.tesla.values import DBC, CAR
+from opendbc.car.tesla.values import DBC, CAR, CANBUS
 
 RADAR_START_ADDR = 0x410
 RADAR_MSG_COUNT = 80  # 40 points * 2 messages each
@@ -38,7 +38,7 @@ def get_radar_can_parser(CP):
       (f'RadarPoint{i}_B', freq),
     ])
 
-  return CANParser(DBC[CP.carFingerprint][Bus.radar], messages, 1)
+  return CANParser(DBC[CP.carFingerprint][Bus.radar], messages, CANBUS.radar)
 
 
 class RadarInterface(RadarInterfaceBase):

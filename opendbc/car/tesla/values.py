@@ -142,6 +142,7 @@ FSD_14_FW = {
 class CANBUS:
   party = 0
   vehicle = 1
+  radar = 1
   autopilot_party = 2
 
   # only needed on raven
