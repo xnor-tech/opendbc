@@ -57,7 +57,7 @@ FW_VERSIONS = {
   },
   CAR.TESLA_MODEL_X_HW2: {
     (Ecu.eps, 0x730, None): [
-      b'DUMMY',
+      b'\x10#\x81',
     ],
   },
   CAR.TESLA_MODEL_S: {
