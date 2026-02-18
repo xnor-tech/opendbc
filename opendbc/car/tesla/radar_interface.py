@@ -67,8 +67,9 @@ class RadarInterface(RadarInterfaceBase):
     vls = self.rcp.update(can_strings)
     self.updated_messages.update(vls)
 
+    ret = structs.RadarData()
     if self.trigger_msg not in self.updated_messages:
-      return None
+      return ret
 
     rr = self._update(self.updated_messages)
     self.updated_messages.clear()
