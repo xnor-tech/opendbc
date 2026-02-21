@@ -36,7 +36,7 @@ class TestMGSafety(common.PandaCarSafetyTest, common.DriverTorqueSteeringSafetyT
     return self.packer.make_can_msg_safety("SCS_HSC2_FrP19", 0, values)
 
   def _torque_driver_msg(self, torque):
-    values = {"DrvrStrgDlvrdToqHSC2": torque}
+    values = {"DrvrStrgDlvrdToqHSC2": torque * 0.01}
     return self.packer.make_can_msg_safety("EPS_HSC2_FrP03", 0, values)
 
   def _user_brake_msg(self, brake):
