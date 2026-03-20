@@ -26,5 +26,10 @@ test:
       run: opendbc/safety/tests/misra/test_misra.sh
 
     # *** tests ***
+<<<<<<< ours
     unittest:
       run: unittest-parallel -j8 -s opendbc -p 'test_*.py' -t .
+=======
+    pytest:
+      run: pytest -n8
+>>>>>>> theirs

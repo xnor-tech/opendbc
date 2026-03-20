@@ -6,19 +6,21 @@ cd $DIR
 
 source ../../../setup.sh
 
-# reset coverage data
+# reset coverage data and generate gcc note file
 rm -f ./libsafety/*.gcda
+scons -j$(nproc) -D
 
 # run safety tests and generate coverage data
+<<<<<<< ours
 python -m unittest discover -s . -p 'test_*.py' -t ../../../
+=======
+pytest -n8 --ignore-glob=misra/*
+>>>>>>> theirs
 
-# NOTE: we accept that these tools will have slight differences,
-# and in return, we get to use the stock toolchain instead of
-# installing LLVM on all users' machines
 if [ "$(uname)" = "Darwin" ]; then
-  GCOV_EXEC="llvm-cov gcov"
+  GCOV_EXEC="/opt/homebrew/opt/llvm@18/bin/llvm-cov gcov"
 else
-  GCOV_EXEC="gcov"
+  GCOV_EXEC="llvm-cov-18 gcov"
 fi
 
 # generate and open report
