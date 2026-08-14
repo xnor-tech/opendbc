@@ -4,6 +4,11 @@ from opendbc.car.mg.values import CAR
 Ecu = CarParams.Ecu
 
 FW_VERSIONS = {
+  CAR.MG_4_EV: {
+    (Ecu.eps, 0x721, None): [
+      b'PLACEHOLDER',
+    ],
+  },
   CAR.MG_5_EV: {
     (Ecu.eps, 0x721, None): [
       b'\x10gs\x16\x01',

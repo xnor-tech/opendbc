@@ -1,0 +1,119 @@
+VERSION "MG4_CANFD"
+
+
+NS_ :
+	NS_DESC_
+	CM_
+	BA_DEF_
+	BA_
+	VAL_
+	CAT_DEF_
+	CAT_
+	FILTER
+	BA_DEF_DEF_
+	EV_DATA_
+	ENVVAR_DATA_
+	SGTYPE_
+	SGTYPE_VAL_
+	BA_DEF_SGTYPE_
+	BA_SGTYPE_
+	SIG_TYPE_REF_
+	VAL_TABLE_
+	SIG_GROUP_
+	SIG_VALTYPE_
+	SIGTYPE_VALTYPE_
+	BO_TX_BU_
+	BA_DEF_REL_
+	BA_REL_
+	BA_DEF_DEF_REL_
+	BU_SG_REL_
+	BU_EV_REL_
+	BU_BO_REL_
+	SG_MUL_VAL_
+
+BS_:
+
+BU_: XXX
+
+BO_ 70 MSG_046: 48 XXX
+
+BO_ 137 MSG_089: 24 XXX
+
+BO_ 165 MSG_0A5: 12 XXX
+
+BO_ 171 STEER_ANGLE: 48 XXX
+ SG_ StrgWhlAng : 55|16@0+ (0.0625,-2048) [-2048|2047.94] "deg"  XXX
+ SG_ AccActive : 71|1@0+ (1,0) [0|1] ""  XXX
+
+BO_ 192 MSG_0C0: 24 XXX
+
+BO_ 318 ESP_SPEED: 64 XXX
+ SG_ Standstill : 149|1@0+ (1,0) [0|1] ""  XXX
+ SG_ VehSpdAvg : 246|15@0+ (0.015625,0) [0|511.98] "km/h"  XXX
+
+BO_ 319 ESP_ACCEL: 48 XXX
+ SG_ LatAccel : 55|16@0- (1,0) [-32768|32767] ""  XXX
+ SG_ LongAccel : 79|16@0- (1,0) [-32768|32767] ""  XXX
+
+BO_ 337 MSG_151: 12 XXX
+
+BO_ 343 MSG_157: 24 XXX
+
+BO_ 366 BRAKE: 48 XXX
+ SG_ BrkPdlAppd : 47|1@0+ (1,0) [0|1] ""  XXX
+
+BO_ 376 MSG_178: 20 XXX
+
+BO_ 404 MSG_194: 12 XXX
+
+BO_ 451 CLUSTER_SPEED: 24 XXX
+ SG_ VehSpdDisplay : 55|8@0+ (1,0) [0|255] "km/h"  XXX
+
+BO_ 474 ACC_STATE: 48 XXX
+ SG_ AccSts : 143|8@0+ (1,0) [0|255] ""  XXX
+
+BO_ 481 MSG_1E1: 12 XXX
+
+BO_ 497 MSG_1F1: 48 XXX
+
+BO_ 555 MSG_22B: 12 XXX
+
+BO_ 725 MSG_2D5: 12 XXX
+
+BO_ 812 MSG_32C: 48 XXX
+
+BO_ 814 MSG_32E: 48 XXX
+
+BO_ 857 MSG_359: 48 XXX
+
+BO_ 921 MSG_399: 48 XXX
+
+BO_ 924 MSG_39C: 24 XXX
+
+BO_ 988 MSG_3DC: 64 XXX
+
+BO_ 1008 MSG_3F0: 12 XXX
+
+BO_ 1011 MSG_3F3: 48 XXX
+
+BO_ 1019 MSG_3FB: 24 XXX
+
+BO_ 1142 MSG_476: 24 XXX
+
+BO_ 1147 MSG_47B: 12 XXX
+
+BO_ 1216 MSG_4C0: 8 XXX
+
+BO_ 1228 MSG_4CC: 8 XXX
+
+BO_ 1229 MSG_4CD: 8 XXX
+
+BO_ 1254 MSG_4E6: 8 XXX
+
+BO_ 1255 MSG_4E7: 8 XXX
+
+BO_ 1352 MSG_548: 48 XXX
+
+BO_ 1358 MSG_54E: 12 XXX
+
+CM_ "Outer CAN FD frames pack 12-byte chunks: 4-byte header (inner id + subid + dlc) followed by 8 data bytes. Chunk order is fixed per address. Within each chunk data: byte 0 checksum, byte 1 low nibble rolling counter (0-14).";

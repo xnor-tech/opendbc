@@ -19,6 +19,8 @@ class CarInterface(CarInterfaceBase):
       ret.safetyConfigs[0].safetyParam |= MgSafetyFlags.ALT_BRAKE.value
     elif candidate == CAR.MG_ZS:
       ret.safetyConfigs[0].safetyParam |= MgSafetyFlags.NON_EV.value
+    elif candidate == CAR.MG_4_EV:
+      ret.dashcamOnly = True
 
     ret.steerActuatorDelay = 0.3
     CarInterfaceBase.configure_torque_tune(candidate, ret.lateralTuning)

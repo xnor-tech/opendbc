@@ -3,7 +3,7 @@ from opendbc.car import Bus
 from opendbc.car.lateral import apply_driver_steer_torque_limits
 from opendbc.car.interfaces import CarControllerBase
 from opendbc.car.mg.mgcan import create_lka_steering
-from opendbc.car.mg.values import CarControllerParams
+from opendbc.car.mg.values import CAR, CarControllerParams
 
 
 class CarController(CarControllerBase):
@@ -17,6 +17,10 @@ class CarController(CarControllerBase):
     actuators = CC.actuators
 
     can_sends = []
+
+    if self.CP.carFingerprint == CAR.MG_4_EV:
+      self.frame += 1
+      return actuators.as_builder(), can_sends
 
     # steering command
     if self.frame % CarControllerParams.STEER_STEP == 0:

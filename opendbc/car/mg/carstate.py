@@ -12,6 +12,9 @@ class CarState(CarStateBase):
     super().__init__(CP)
 
   def update(self, can_parsers) -> structs.CarState:
+    if self.CP.carFingerprint == CAR.MG_4_EV:
+      return self.update_mg4(can_parsers)
+
     cp = can_parsers[Bus.pt]
     cp_cam = can_parsers[Bus.cam]
     ret = structs.CarState()
@@ -81,6 +84,46 @@ class CarState(CarStateBase):
     # ret.rightBlindspot = False
 
     # AEB
+    ret.stockAeb = False
+
+    return ret
+
+  def update_mg4(self, can_parsers) -> structs.CarState:
+    cp = can_parsers[Bus.pt]
+    ret = structs.CarState()
+
+    ret.vEgoRaw = cp.vl["ESP_SPEED"]["VehSpdAvg"] * CV.KPH_TO_MS
+    ret.vEgo, ret.aEgo = self.update_speed_kf(ret.vEgoRaw)
+    ret.standstill = cp.vl["ESP_SPEED"]["Standstill"] == 1
+
+    ret.gasPressed = False
+    ret.brake = 0
+    ret.brakePressed = cp.vl["BRAKE"]["BrkPdlAppd"] == 1
+
+    ret.steeringAngleDeg = cp.vl["STEER_ANGLE"]["StrgWhlAng"]
+    ret.steeringRateDeg = 0.
+    ret.steeringTorque = 0.
+    ret.steeringTorqueEps = 0.
+    ret.steeringPressed = False
+
+    ret.steerFaultTemporary = False
+
+    ret.cruiseState.enabled = (int(cp.vl["ACC_STATE"]["AccSts"]) & 0x40) != 0
+    ret.cruiseState.available = True
+    ret.cruiseState.standstill = False
+    ret.cruiseState.speed = 0.
+
+    ret.accFaulted = False
+
+    ret.gearShifter = GearShifter.drive
+
+    ret.doorOpen = False
+
+    ret.leftBlinker = False
+    ret.rightBlinker = False
+
+    ret.seatbeltUnlatched = False
+
     ret.stockAeb = False
 
     return ret
