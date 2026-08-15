@@ -94,7 +94,7 @@ class CarState(CarStateBase):
 
     ret.vEgoRaw = cp.vl["ESP_SPEED"]["VehSpdAvg"] * CV.KPH_TO_MS
     ret.vEgo, ret.aEgo = self.update_speed_kf(ret.vEgoRaw)
-    ret.standstill = cp.vl["ESP_SPEED"]["Standstill"] == 1
+    ret.standstill = ret.vEgoRaw < 0.01
 
     ret.gasPressed = False
     ret.brake = 0
@@ -119,8 +119,8 @@ class CarState(CarStateBase):
 
     ret.doorOpen = False
 
-    ret.leftBlinker = False
-    ret.rightBlinker = False
+    ret.leftBlinker = cp.vl["BCM_A"]["DircnIndLampSwSts"] == 1  # TODO: verify left/right mapping
+    ret.rightBlinker = cp.vl["BCM_A"]["DircnIndLampSwSts"] == 2
 
     ret.seatbeltUnlatched = False
 

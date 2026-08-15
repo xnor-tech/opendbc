@@ -48,7 +48,7 @@ BO_ 171 STEER_ANGLE: 48 XXX
 BO_ 192 MSG_0C0: 24 XXX
 
 BO_ 318 ESP_SPEED: 64 XXX
- SG_ Standstill : 149|1@0+ (1,0) [0|1] ""  XXX
+ SG_ BrkPdlDrvrAppdPrs : 151|8@0+ (75,0) [0|19125] "kPa"  XXX
  SG_ VehSpdAvg : 246|15@0+ (0.015625,0) [0|511.98] "km/h"  XXX
 
 BO_ 319 ESP_ACCEL: 48 XXX
@@ -96,7 +96,10 @@ BO_ 1008 MSG_3F0: 12 XXX
 
 BO_ 1011 MSG_3F3: 48 XXX
 
-BO_ 1019 MSG_3FB: 24 XXX
+BO_ 1019 BCM_A: 24 XXX
+ SG_ DircnIndLampSwSts : 139|2@0+ (1,0) [0|3] ""  XXX
+ SG_ LDircnIO : 147|1@0+ (1,0) [0|1] ""  XXX
+ SG_ RDircnIO : 145|1@0+ (1,0) [0|1] ""  XXX
 
 BO_ 1142 MSG_476: 24 XXX
 
